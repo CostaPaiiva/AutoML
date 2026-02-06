@@ -11,3 +11,17 @@ __pycache__/
 
 # Configurações locais
 .env
+# Crie ou edite o .gitignore
+echo "*.pkl" >> .gitignore
+echo "models/" >> .gitignore
+echo "reports/" >> .gitignore
+
+# Remova o arquivo do controle do Git
+git rm --cached modelo.pkl
+git rm --cached -r models/ 2>/dev/null || true
+git rm --cached -r reports/ 2>/dev/null || true
+
+# Agora sim, cancele o merge
+git merge --abort
+
+
