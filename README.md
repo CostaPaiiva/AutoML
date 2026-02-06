@@ -319,7 +319,5 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para d
 ##  **Próximos passos:**
 
 1. **Teste com diferentes datasets** para ver como se comporta
-2. **Adicionar mais modelos** para expandir
-3. **Criar uma versão para deploy** no Streamlit Cloud
-4. **Adicionar mais visualizações** de dados
-5. **Adicionar opção de baixar em pdf**
+2. **Criar uma versão para deploy** no Streamlit Cloud
+3. **Adicionar mais visualizações** de dados
