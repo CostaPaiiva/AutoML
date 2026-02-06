@@ -3,7 +3,9 @@
 Sistema completo e robusto para processamento automático de dados e treinamento de múltiplos modelos de Machine Learning com interface web intuitiva.
 
 ✨ Funcionalidades Principais
+
 🔍 Processamento Inteligente
+
 ✅ Upload automático de arquivos CSV, TXT e Excel
 
 ✅ Detecção automática do tipo de problema (Classificação/Regressão)
@@ -26,6 +28,7 @@ Sistema completo e robusto para processamento automático de dados e treinamento
 ✅ Ranking completo dos modelos treinados
 
 📊 Dashboard Interativo
+
 ✅ Visualizações com Plotly
 
 ✅ Métricas detalhadas por modelo
@@ -37,7 +40,9 @@ Sistema completo e robusto para processamento automático de dados e treinamento
 ✅ Interface responsiva e amigável
 
 🚀 Começando
+
 Pré-requisitos
+
 Python 3.8 ou superior
 
 pip (gerenciador de pacotes Python)
@@ -47,26 +52,24 @@ Clone o repositório ou baixe os arquivos
 
 bash
 git clone https://github.com/CostaPaiiva/AutoML.git
-cd automl-system
+
 Instale as dependências
 
 bash
 pip install -r requirements.txt
+
 Execute o sistema
 
 bash
-streamlit run app_ultra_robust.py
+streamlit run app.py
+
 Acesse no navegador
 
 text
 http://localhost:8501
-Instalação Rápida (Windows)
 
-powershell
-# Execute o instalador automático
-install.bat
-📋 Como Usar
 Passo 1: Upload do Dataset
+
 Clique em "Escolha um arquivo CSV"
 
 Selecione seu dataset (CSV, TXT ou Excel)
@@ -212,6 +215,7 @@ scoring = 'f1'  # Em vez de 'accuracy'
 
 # 3. Ajustar tamanho do split
 test_size = 0.3  # 30% para teste
+
 📤 Exportação de Resultados
 1. CSV do Ranking
 csv
@@ -315,6 +319,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para d
 ##  **Próximos passos:**
 
 1. **Teste com diferentes datasets** para ver como se comporta
-2. **Adicione mais modelos** para expandir
-3. **Crie uma versão para deploy** no Streamlit Cloud
-4. **Adicione mais visualizações** de dados
+2. **Adicionar mais modelos** para expandir
+3. **Criar uma versão para deploy** no Streamlit Cloud
+4. **Adicionar mais visualizações** de dados
+5. **Adicionar opção de baixar em pdf**
