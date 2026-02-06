@@ -96,21 +96,6 @@ Exporte os resultados
 
 Baixe o melhor modelo treinado
 
-🏗️ Arquitetura do Sistema
-text
-AutoML-System/
-├── app.py                  # Aplicação principal
-├── requirements.txt        # Dependências
-├── README.md              # Esta documentação
-├── models/                # Modelos salvos
-│   └── melhor_modelo.pkl
-├── data/                  # Datasets de exemplo
-│   ├── iris.csv
-│   ├── diabetes.csv
-│   └── house_prices.csv
-└── exports/              # Resultados exportados
-    ├── ranking.csv
-    └── relatorios/
 🔧 Tecnologias Utilizadas
 Python 3.8+ - Linguagem principal
 
@@ -126,8 +111,10 @@ Plotly - Visualizações interativas
 
 Joblib - Serialização de modelos
 
-📊 Modelos Implementados
-Para Classificação
+📊 Modelos Implementados:
+
+Para Classificação:
+
 ✅ Logistic Regression
 
 ✅ Random Forest Classifier
@@ -136,7 +123,8 @@ Para Classificação
 
 ✅ Naive Bayes (Gaussian)
 
-Para Regressão
+Para Regressão:
+
 ✅ Linear Regression
 
 ✅ Ridge Regression
@@ -145,8 +133,10 @@ Para Regressão
 
 ✅ Decision Tree Regressor
 
-📈 Métricas de Avaliação
+📈 Métricas de Avaliação:
+
 Classificação
+
 Acurácia - Porcentagem de previsões corretas
 
 F1-Score - Média harmônica entre precisão e recall
@@ -318,7 +308,7 @@ Mantenha a compatibilidade com versões anteriores
 Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para detalhes.
 
 
-⚠️ Nota: Este é um sistema educacional para fins de Estudos
+⚠️ NOTA: ESTE É UM SISTEMA EDUCACIONAL PARA FINS DE ESTUDO
 
 
 
