@@ -1,3 +1,10 @@
+# Esse código implementa um dashboard interativo de Machine Learning usando o framework Dash
+# (com Bootstrap e Plotly).
+# Ele cria uma aplicação web que permite visualizar, comparar e exportar resultados
+# de modelos de Machine Learning. O usuário pode abrir o dashboard no navegador e
+# interagir com gráficos, tabelas e botões.
+
+
 # Importa o framework Dash para criar o dashboard
 import dash
 # Importa componentes do Dash para criar elementos interativos e layout
@@ -113,12 +120,16 @@ class AdvancedDashboard:
 
             # Linha para o ranking dos modelos
             dbc.Row([
-                # Coluna contendo o gráfico de ranking
+                # Coluna contendo o card do ranking dos modelos
                 dbc.Col([
+                    # Card que encapsula o gráfico de ranking
                     dbc.Card([
+                        # Cabeçalho do card com o título
                         dbc.CardHeader(
                             "🏆 Ranking dos Modelos (do melhor para o pior)"),
+                        # Corpo do card onde o gráfico será exibido
                         dbc.CardBody([
+                            # Gráfico de ranking dos modelos
                             dcc.Graph(id='ranking-plot')
                         ])
                     ])
@@ -129,20 +140,25 @@ class AdvancedDashboard:
             dbc.Row([
                 # Coluna contendo o dropdown e o gráfico de métricas
                 dbc.Col([
+                    # Card que encapsula o dropdown e o gráfico de métricas
                     dbc.Card([
+                        # Cabeçalho do card com o título
                         dbc.CardHeader("📊 Comparação de Métricas"),
+                        # Corpo do card onde os elementos serão exibidos
                         dbc.CardBody([
                             # Dropdown para selecionar o tipo de métrica
                             dcc.Dropdown(
-                                id='metric-selector',
-                                options=[
+                                id='metric-selector',  # Define o ID do componente como 'metric-selector'
+                                options=[  # Define as opções disponíveis no dropdown
+                                    # Opção para exibir todas as métricas
                                     {'label': 'Todas as Métricas', 'value': 'all'},
+                                    # Opção para exibir métricas principais
                                     {'label': 'Acurácia/F1/R2', 'value': 'main'},
-                                    {'label': 'Métricas Detalhadas',
+                                    {'label': 'Métricas Detalhadas',  # Opção para exibir métricas detalhadas
                                         'value': 'detailed'}
                                 ],
-                                value='main',
-                                className="mb-3"
+                                value='main',  # Define o valor padrão como 'main'
+                                className="mb-3"  # Adiciona uma classe CSS para estilização
                             ),
                             # Gráfico de comparação de métricas
                             dcc.Graph(id='metrics-comparison')
@@ -155,9 +171,13 @@ class AdvancedDashboard:
             dbc.Row([
                 # Coluna contendo o gráfico de importância das features
                 dbc.Col([
+                    # Card que encapsula o gráfico de importância das features
                     dbc.Card([
+                        # Cabeçalho do card com o título
                         dbc.CardHeader("🔍 Feature Importance - Top 5 Modelos"),
+                        # Corpo do card onde o gráfico será exibido
                         dbc.CardBody([
+                            # Gráfico de importância das features
                             dcc.Graph(id='feature-importance-plot')
                         ])
                     ])
@@ -172,12 +192,16 @@ class AdvancedDashboard:
                         dbc.CardHeader("🔮 Visualização de Previsões vs Real"),
                         dbc.CardBody([
                             # Dropdown para selecionar o modelo
+                            # Define o ID do componente como 'model-selector'
                             dcc.Dropdown(
                                 id='model-selector',
+                                # Define as opções do dropdown com base nos nomes dos modelos disponíveis
                                 options=[{'label': m, 'value': m}
                                          for m in self.models.keys()],
+                                # Define o valor padrão como o primeiro modelo na lista, se houver modelos disponíveis
                                 value=list(self.models.keys())[
                                     0] if self.models else None,
+                                # Adiciona uma classe CSS para estilização
                                 className="mb-3"
                             ),
                             # Gráfico de previsões
@@ -297,14 +321,16 @@ class AdvancedDashboard:
             Input('ranking-plot', 'id')
         )
         def update_ranking_plot(_):
-            # Ordena os modelos pela métrica principal em ordem decrescente
-            sorted_results = sorted(self.results.items(),
+            # Ordena os resultados dos modelos com base na métrica principal, em ordem decrescente
+            sorted_results = sorted(self.results.items(),  # Obtém os itens (nome do modelo e métricas) dos resultados
+                                    # Define a métrica principal como chave para ordenação
                                     key=lambda x: self.get_primary_metric(
                                         x[1]),
-                                    reverse=True)
+                                    reverse=True)  # Ordena em ordem decrescente
 
-            # Extrai os nomes dos modelos e suas respectivas métricas
+            # Extrai os nomes dos modelos dos resultados ordenados
             models = [m[0] for m in sorted_results]
+            # Extrai as métricas principais dos modelos ordenados
             scores = [self.get_primary_metric(m[1]) for m in sorted_results]
 
             # Cria um gráfico de barras horizontal para o ranking
@@ -358,13 +384,16 @@ class AdvancedDashboard:
                     # Obtém os valores da métrica atual para cada modelo nos resultados
                     values = [self.results[m].get(key, 0) for m in models]
 
-                    # Inverte os valores de RMSE para visualização
+                    # Inverte os valores de RMSE para que valores menores sejam melhores visualmente
                     if key == 'rmse':
+                        # Multiplica os valores de RMSE por -1
                         values = [-v for v in values]
 
+                    # Adiciona um gráfico de barras ao subplot correspondente
                     fig.add_trace(
+                        # Cria o gráfico de barras com os modelos no eixo x e os valores no eixo y
                         go.Bar(x=models, y=values, name=name),
-                        row=1, col=i+1
+                        row=1, col=i+1  # Define a posição do gráfico no subplot
                     )
 
                     # Ajusta o ângulo dos rótulos do eixo x
@@ -384,45 +413,54 @@ class AdvancedDashboard:
                 all_metrics = [
                     m for m in all_metrics if m not in ['confusion_matrix']]
 
-                # Prepara os dados para o heatmap
+                # Inicializa uma lista para armazenar os dados do heatmap
                 data = []
+                # Itera sobre cada modelo nos resultados
                 for model in models:
+                    # Inicializa uma lista para armazenar os valores das métricas para o modelo atual
                     row = []
+                    # Itera sobre todas as métricas disponíveis
                     for metric in all_metrics:
+                        # Obtém o valor da métrica atual para o modelo atual, ou 0 se não estiver disponível
                         value = self.results[model].get(metric, 0)
 
-                        # Substitui valores ausentes por 0
+                        # Substitui valores ausentes por 0 (caso o valor seja None)
                         if value is None:
                             value = 0
 
-                        # Inverte valores de RMSE para visualização
+                        # Inverte os valores de RMSE para que valores menores sejam melhores visualmente
                         if metric == 'rmse':
                             value = -value
 
+                        # Adiciona o valor da métrica à linha correspondente ao modelo
                         row.append(value)
+                    # Adiciona a linha completa (valores das métricas) à lista de dados do heatmap
                     data.append(row)
 
-                # Cria o heatmap
+                # Cria o heatmap com os dados processados
                 fig = go.Figure(data=go.Heatmap(
-                    z=data,
-                    x=all_metrics,
-                    y=models,
-                    colorscale='Viridis',
-                    colorbar=dict(title="Valor")
+                    z=data,  # Define os valores do heatmap como os dados processados
+                    x=all_metrics,  # Define os rótulos do eixo x como as métricas
+                    y=models,  # Define os rótulos do eixo y como os modelos
+                    colorscale='Viridis',  # Define a escala de cores do heatmap
+                    colorbar=dict(title="Valor")  # Adiciona um título à barra de cores
                 ))
 
                 # Configura o layout do heatmap
                 fig.update_layout(
-                    title="Comparação de Todas as Métricas",
-                    height=600,
-                    template="plotly_dark"
+                    title="Comparação de Todas as Métricas",  # Define o título do gráfico
+                    height=600,  # Define a altura do gráfico
+                    template="plotly_dark"  # Define o tema do gráfico como escuro
                 )
 
+            # Retorna o gráfico gerado
             return fig
 
         # Callback para atualizar o gráfico de importância das features
         @self.app.callback(
+            # Define o componente de saída como o gráfico de importância das features
             Output('feature-importance-plot', 'figure'),
+            # Define o componente de entrada como o ID do gráfico de importância das features
             Input('feature-importance-plot', 'id')
         )
         def update_feature_importance(_):
@@ -432,40 +470,54 @@ class AdvancedDashboard:
 
             # Obtém os top 5 modelos com importância de features
             models_with_fi = []
+            # Lista para armazenar os modelos que possuem importância de features
             for name, metrics in self.results.items():
+                # Verifica se o modelo atual está na lista de importância de features
                 if name in self.feature_importance:
+                    # Adiciona o modelo e sua métrica principal à lista
                     models_with_fi.append(
-                        (name, self.get_primary_metric(metrics)))
+                        (name, self.get_primary_metric(metrics))
+                    )
 
-            # Ordena os modelos pela métrica principal
+            # Ordena os modelos pela métrica principal em ordem decrescente
             models_with_fi.sort(key=lambda x: x[1], reverse=True)
+            # Seleciona os nomes dos top 5 modelos com base na métrica principal
             top_5_models = [m[0] for m in models_with_fi[:5]]
 
-            # Cria subplots para os top 5 modelos
+            # Cria subplots para os top 5 modelos, compartilhando o eixo y
             fig = make_subplots(rows=1, cols=len(top_5_models),
                                 subplot_titles=top_5_models,
                                 shared_yaxes=True)
 
             # Adiciona gráficos de barras para cada modelo
             for i, model_name in enumerate(top_5_models):
+                # Verifica se o modelo atual possui importância de features
                 if model_name in self.feature_importance:
+                    # Obtém as importâncias das features para o modelo atual
                     importances = self.feature_importance[model_name]
 
-                    # Obtém os nomes das features
+                    # Verifica se X_test tem colunas (é um DataFrame)
                     if hasattr(self.X_test, 'columns'):
+                        # Obtém os nomes das colunas como features
                         features = self.X_test.columns.tolist()
+                    # Caso contrário, cria nomes genéricos para as features
                     else:
                         features = [
-                            f'Feature_{i}' for i in range(len(importances))]
+                            f'Feature_{i}' for i in range(len(importances))
+                        ]
 
                     # Ordena as features pela importância
                     sorted_idx = np.argsort(importances)[-10:]
 
+                    # Adiciona um gráfico de barras horizontal ao subplot atual
                     fig.add_trace(
+                        # Cria um gráfico de barras com as importâncias das features no eixo x
                         go.Bar(x=importances[sorted_idx],
+                               # e os nomes das features correspondentes no eixo y
                                y=[features[i] for i in sorted_idx],
-                               orientation='h',
-                               name=model_name),
+                               orientation='h',  # Define a orientação do gráfico como horizontal
+                               name=model_name),  # Define o nome do traço como o nome do modelo
+                        # Define a posição do gráfico no subplot (linha 1, coluna i+1)
                         row=1, col=i+1
                     )
 
@@ -476,9 +528,9 @@ class AdvancedDashboard:
             return fig
 
         # Callback para atualizar o gráfico de previsões vs real
-        @self.app.callback(
-            Output('predictions-plot', 'figure'),
-            Input('model-selector', 'value')
+        @self.app.callback(  # Define um callback para atualizar o gráfico de previsões vs real
+            Output('predictions-plot', 'figure'),  # Define o componente de saída como o gráfico de previsões
+            Input('model-selector', 'value')  # Define o componente de entrada como o valor selecionado no dropdown de modelos
         )
         def update_predictions_plot(selected_model):
             # Retorna um gráfico vazio se o modelo ou os dados de teste não estiverem disponíveis
@@ -494,46 +546,63 @@ class AdvancedDashboard:
                 # Cria um gráfico de dispersão para previsões vs valores reais
                 fig = go.Figure()
 
+                # Adiciona um gráfico de dispersão para previsões vs valores reais
                 fig.add_trace(go.Scatter(
-                    x=self.y_test,
-                    y=y_pred,
+                    x=self.y_test,  # Valores reais no eixo x
+                    y=y_pred,  # Valores previstos no eixo y
+                    # Define o modo do gráfico como pontos (dispersão)
                     mode='markers',
-                    name='Previsões',
+                    name='Previsões',  # Nome do traço no gráfico
+                    # Define a cor dos pontos como azul claro
                     marker=dict(color='lightblue')
                 ))
 
-                # Adiciona uma linha de perfeita predição
+                # Calcula os valores mínimo e máximo para a linha de perfeita predição
+                # Obtém o menor valor entre os reais e previstos
                 min_val = min(self.y_test.min(), y_pred.min())
+                # Obtém o maior valor entre os reais e previstos
                 max_val = max(self.y_test.max(), y_pred.max())
 
+                # Adiciona uma linha de perfeita predição ao gráfico
                 fig.add_trace(go.Scatter(
+                    # Define os valores do eixo x como o intervalo mínimo e máximo
                     x=[min_val, max_val],
+                    # Define os valores do eixo y como o intervalo mínimo e máximo
                     y=[min_val, max_val],
-                    mode='lines',
-                    name='Ideal',
+                    mode='lines',  # Define o modo do gráfico como linhas
+                    name='Ideal',  # Nome do traço no gráfico
+                    # Define a cor da linha como vermelha e o estilo como tracejado
                     line=dict(color='red', dash='dash')
                 ))
 
                 # Configura o layout do gráfico
                 fig.update_layout(
+                    # Define o título do gráfico com o nome do modelo selecionado
                     title=f"Previsões vs Real - {selected_model}",
-                    xaxis_title="Valor Real",
-                    yaxis_title="Valor Previsto",
-                    template="plotly_dark"
+                    xaxis_title="Valor Real",  # Define o título do eixo x
+                    yaxis_title="Valor Previsto",  # Define o título do eixo y
+                    template="plotly_dark"  # Define o tema do gráfico como escuro
                 )
 
             else:
-                # Cria uma matriz de confusão para problemas de classificação
-                from sklearn.metrics import confusion_matrix
+                # Cria uma matriz de confusão a partir dos valores reais e previstos
                 cm = confusion_matrix(self.y_test, y_pred)
 
+                # Cria um objeto Figure do Plotly para o heatmap
                 fig = go.Figure(data=go.Heatmap(
+                    # Define os valores da matriz de confusão como dados do heatmap
                     z=cm,
+                    # Define os rótulos do eixo x (previsões)
                     x=['Previsto ' + str(i) for i in range(cm.shape[1])],
+                    # Define os rótulos do eixo y (reais)
                     y=['Real ' + str(i) for i in range(cm.shape[0])],
+                    # Define a escala de cores do heatmap
                     colorscale='Blues',
+                    # Exibe os valores da matriz de confusão como texto no heatmap
                     text=cm,
+                    # Define o formato do texto exibido
                     texttemplate='%{text}',
+                    # Define a fonte e o tamanho do texto
                     textfont={"size": 10}
                 ))
 
@@ -571,14 +640,22 @@ class AdvancedDashboard:
 
             # Gera o relatório em PDF se o botão correspondente foi clicado
             if button_id == 'generate-pdf':
+                # Define o conteúdo do PDF como uma string de exemplo
                 pdf_content = "Relatório PDF gerado com sucesso!"
+                # Codifica o conteúdo do PDF em base64 para permitir o download
                 pdf_b64 = base64.b64encode(pdf_content.encode()).decode()
 
+                # Cria um link de download para o arquivo PDF
                 download_link = html.A(
+                    # Texto do botão de download
                     "📥 Baixar Relatório PDF",
+                    # ID do componente para callbacks
                     id="pdf-download-link",
+                    # Define o conteúdo do link como o PDF codificado em base64
                     href=f"data:application/pdf;base64,{pdf_b64}",
+                    # Nome do arquivo ao ser baixado
                     download="relatorio_ml.pdf",
+                    # Classe CSS para estilização
                     className="btn btn-success mt-2"
                 )
 
@@ -586,30 +663,44 @@ class AdvancedDashboard:
 
             # Exporta os resultados em CSV se o botão correspondente foi clicado
             elif button_id == 'export-csv':
+                # Converte os resultados em um DataFrame do pandas
                 results_df = pd.DataFrame(self.results).T
+                # Converte o DataFrame para uma string CSV
                 csv_string = results_df.to_csv(index=True)
+                # Codifica a string CSV em base64 para permitir o download
                 csv_b64 = base64.b64encode(csv_string.encode()).decode()
 
+                # Cria um link de download para o arquivo CSV
                 download_link = html.A(
-                    "💾 Baixar CSV",
-                    id="csv-download-link",
+                    "💾 Baixar CSV",  # Texto do botão de download
+                    id="csv-download-link",  # ID do componente para callbacks
+                    # Define o conteúdo do link como o CSV codificado em base64
                     href=f"data:text/csv;base64,{csv_b64}",
-                    download="resultados_ml.csv",
-                    className="btn btn-success mt-2"
+                    download="resultados_ml.csv",  # Nome do arquivo ao ser baixado
+                    className="btn btn-success mt-2"  # Classe CSS para estilização
                 )
 
+                # Retorna o link de download e atualiza a barra de progresso e a mensagem de status
                 return dash.no_update, dash.no_update, download_link, dash.no_update, 100, "✅ CSV exportado com sucesso!"
 
             # Salva o melhor modelo se o botão correspondente foi clicado
             elif button_id == 'save-model':
+                # Define o conteúdo do modelo salvo como uma string de exemplo
                 model_content = "Modelo salvo com sucesso!"
+                # Codifica o conteúdo do modelo em base64 para download
                 model_b64 = base64.b64encode(model_content.encode()).decode()
 
+                # Cria um link de download para o modelo salvo
                 download_link = html.A(
+                    # Texto do link de download
                     "🤖 Baixar Modelo",
+                    # ID do link de download
                     id="model-download-link",
+                    # Define o href como o conteúdo codificado em base64
                     href=f"data:application/octet-stream;base64,{model_b64}",
+                    # Nome do arquivo para download
                     download="melhor_modelo.pkl",
+                    # Classe CSS para estilização do botão
                     className="btn btn-success mt-2"
                 )
 
