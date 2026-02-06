@@ -7,6 +7,7 @@ import time
 import base64
 import joblib
 from datetime import datetime
+import os
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -48,6 +49,238 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# ========== GERADOR DE RELATÓRIO PDF ==========
+class PDFReportGenerator:
+    """Gera relatório PDF dos resultados"""
+    
+    @staticmethod
+    def generate_report(results, trainer, problem_type, data_info=None):
+        """Gera relatório PDF com todos os resultados"""
+        try:
+            # Tenta usar fpdf2
+            try:
+                from fpdf import FPDF
+                
+                # Criar PDF
+                pdf = FPDF()
+                pdf.add_page()
+                
+                # Configurações - SEM EMOJIS
+                pdf.set_font("Arial", 'B', 16)
+                
+                # Título SEM EMOJIS
+                pdf.cell(0, 10, "RELATORIO AUTOML", ln=True, align='C')
+                pdf.ln(5)
+                
+                # Data
+                pdf.set_font("Arial", '', 10)
+                pdf.cell(0, 10, f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
+                pdf.ln(10)
+                
+                # Informações do projeto
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "INFORMACOES DO PROJETO", ln=True)
+                pdf.set_font("Arial", '', 10)
+                
+                if data_info:
+                    pdf.cell(0, 10, f"Dataset: {data_info.get('dataset_name', 'N/A')}", ln=True)
+                    pdf.cell(0, 10, f"Amostras: {data_info.get('n_samples', 'N/A')}", ln=True)
+                    pdf.cell(0, 10, f"Features: {data_info.get('n_features', 'N/A')}", ln=True)
+                
+                pdf.cell(0, 10, f"Tipo de problema: {problem_type.upper()}", ln=True)
+                pdf.cell(0, 10, f"Total de modelos treinados: {len(results)}", ln=True)
+                pdf.ln(10)
+                
+                # Melhor modelo
+                best_name = trainer.best_model_name
+                if best_name and best_name in results:
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(0, 10, "MELHOR MODELO", ln=True)
+                    pdf.set_font("Arial", '', 10)
+                    
+                    best_metrics = results[best_name]
+                    pdf.cell(0, 10, f"Modelo: {best_name}", ln=True)
+                    
+                    if problem_type == 'classification':
+                        score = best_metrics.get('accuracy', best_metrics.get('score', 0))
+                        pdf.cell(0, 10, f"Acurácia: {score:.4f}", ln=True)
+                    else:
+                        score = best_metrics.get('r2', best_metrics.get('score', 0))
+                        pdf.cell(0, 10, f"R² Score: {score:.4f}", ln=True)
+                    
+                    pdf.ln(10)
+                
+                # Ranking completo
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "RANKING DOS MODELOS", ln=True)
+                pdf.set_font("Arial", '', 10)
+                
+                ranking_df = trainer.get_ranking()
+                
+                # Adicionar tabela
+                pdf.set_fill_color(240, 240, 240)
+                pdf.cell(40, 10, "Posicao", border=1, fill=True)
+                pdf.cell(80, 10, "Modelo", border=1, fill=True)
+                pdf.cell(40, 10, "Score", border=1, fill=True, ln=True)
+                
+                for i, row in ranking_df.iterrows():
+                    pos = str(row['Posição'])
+                    model = str(row['Modelo'])
+                    score = str(row['Score'])
+                    
+                    pdf.cell(40, 10, pos, border=1)
+                    pdf.cell(80, 10, model, border=1)
+                    pdf.cell(40, 10, score, border=1, ln=True)
+                
+                pdf.ln(10)
+                
+                # Métricas detalhadas
+                if len(results) > 0:
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(0, 10, "METRICAS DETALHADAS", ln=True)
+                    pdf.set_font("Arial", '', 10)
+                    
+                    for model_name, metrics in results.items():
+                        pdf.set_font("Arial", 'B', 10)
+                        pdf.cell(0, 10, f"Modelo: {model_name}", ln=True)
+                        pdf.set_font("Arial", '', 9)
+                        
+                        for metric_name, value in metrics.items():
+                            if isinstance(value, (int, float)):
+                                pdf.cell(0, 8, f"  {metric_name}: {value:.4f}", ln=True)
+                        pdf.ln(5)
+                    
+                    pdf.ln(10)
+                
+                # Recomendações SEM EMOJIS
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "RECOMENDACOES", ln=True)
+                pdf.set_font("Arial", '', 10)
+                
+                recommendations = [
+                    "1. Implemente o melhor modelo em producao",
+                    "2. Monitore performance periodicamente",
+                    "3. Re-treine com novos dados regularmente",
+                    "4. Considere tecnicas de ensemble",
+                    "5. Valide com testes A/B antes de deploy"
+                ]
+                
+                for rec in recommendations:
+                    pdf.cell(0, 8, rec, ln=True)
+                
+                # Salvar PDF
+                os.makedirs('reports', exist_ok=True)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'reports/relatorio_automl_{timestamp}.pdf'
+                
+                try:
+                    pdf.output(filename)
+                    
+                    # Verificar se arquivo foi criado
+                    if os.path.exists(filename):
+                        return filename
+                    else:
+                        st.error("PDF não foi criado")
+                        return None
+                        
+                except Exception as e:
+                    st.error(f"Erro ao salvar PDF: {str(e)}")
+                    return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+                
+            except ImportError as e:
+                st.warning("fpdf2 não encontrado. Gerando relatório TXT...")
+                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+            except Exception as e:
+                st.error(f"Erro no fpdf: {str(e)}")
+                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+                
+        except Exception as e:
+            # Fallback final
+            st.error(f"Erro ao gerar relatório: {str(e)}")
+            return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+    
+    @staticmethod
+    def generate_txt_report(results, trainer, problem_type, data_info=None):
+        """Gera relatório em texto (fallback)"""
+        try:
+            
+            # Criar pasta
+            os.makedirs('reports', exist_ok=True)
+            
+            # Gerar nome único
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'reports/relatorio_automl_{timestamp}.txt'
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("=" * 60 + "\n")
+                f.write("RELATORIO AUTOML - TODOS OS MODELOS\n")
+                f.write("=" * 60 + "\n\n")
+                
+                # Informações básicas
+                f.write(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
+                f.write(f"Tipo de problema: {problem_type.upper()}\n")
+                f.write(f"Total de modelos: {len(results)}\n")
+                
+                if data_info:
+                    f.write(f"Amostras: {data_info.get('n_samples', 'N/A')}\n")
+                    f.write(f"Features: {data_info.get('n_features', 'N/A')}\n")
+                
+                # Melhor modelo
+                f.write("\n" + "=" * 60 + "\n")
+                f.write("MELHOR MODELO\n")
+                f.write("=" * 60 + "\n\n")
+                
+                best_name = trainer.best_model_name
+                if best_name and best_name in results:
+                    f.write(f"Modelo: {best_name}\n")
+                    best_metrics = results[best_name]
+                    
+                    for metric, value in best_metrics.items():
+                        if isinstance(value, (int, float)):
+                            f.write(f"{metric}: {value:.4f}\n")
+                
+                # Ranking
+                f.write("\n" + "=" * 60 + "\n")
+                f.write("RANKING COMPLETO\n")
+                f.write("=" * 60 + "\n\n")
+                
+                ranking_df = trainer.get_ranking()
+                for i, row in ranking_df.iterrows():
+                    f.write(f"{row['Posição']}. {row['Modelo']} - Score: {row['Score']}\n")
+                
+                # Métricas detalhadas
+                f.write("\n" + "=" * 60 + "\n")
+                f.write("METRICAS POR MODELO\n")
+                f.write("=" * 60 + "\n\n")
+                
+                for model_name, metrics in results.items():
+                    f.write(f"{model_name}:\n")
+                    for metric, value in metrics.items():
+                        if isinstance(value, (int, float)):
+                            f.write(f"  {metric}: {value:.4f}\n")
+                    f.write("\n")
+                
+                # Recomendações
+                f.write("=" * 60 + "\n")
+                f.write("RECOMENDACOES\n")
+                f.write("=" * 60 + "\n\n")
+                
+                recs = [
+                    "• Use o melhor modelo em producao",
+                    "• Monitore performance",
+                    "• Re-treine regularmente",
+                    "• Valide com novos dados"
+                ]
+                
+                for rec in recs:
+                    f.write(f"{rec}\n")
+            
+            return filename
+            
+        except Exception as e:
+            st.error(f"Erro ao gerar TXT: {str(e)}")
+            return None
 
 # ========== PROCESSAMENTO DE DADOS ULTRA SIMPLES ==========
 class UltraSimpleProcessor:
@@ -533,6 +766,7 @@ class UltraRobustApp:
         
         results = st.session_state.results
         trainer = st.session_state.trainer
+        problem_type = st.session_state.problem_type
         
         # Melhor modelo
         best_name = trainer.best_model_name
@@ -566,45 +800,169 @@ class UltraRobustApp:
             )
             st.plotly_chart(fig, use_container_width=True)
         
-        # Exportação
-        st.subheader("💾 Exportar")
+        # ⭐⭐ COMEÇO DA SEÇÃO DE EXPORTAÇÃO ⭐⭐
+        # EXPORTAÇÃO COMPLETA - Com PDF
+        st.subheader("💾 Exportar Resultados")
         
-        col1, col2, col3 = st.columns(3)
+        # Criar 4 colunas em vez de 3
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
+            # CSV do ranking
             if not ranking_df.empty:
-                csv = ranking_df.to_csv(index=False).encode()
-                st.download_button(
-                    "📊 CSV",
-                    csv,
-                    "ranking.csv",
-                    "text/csv"
-                )
+                try:
+                    csv_data = ranking_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        "📊 CSV",
+                        csv_data,
+                        "ranking.csv",
+                        "text/csv",
+                        key="csv_button"
+                    )
+                except Exception as e:
+                    st.error(f"Erro CSV: {e}")
         
         with col2:
-            if trainer.best_model:
-                try:
-                    joblib.dump(trainer.best_model, 'modelo.pkl')
-                    with open('modelo.pkl', 'rb') as f:
-                        model_bytes = f.read()
-                    
-                    st.download_button(
-                        "🤖 Modelo",
-                        model_bytes,
-                        "melhor_modelo.pkl",
-                        "application/octet-stream"
-                    )
-                except:
-                    st.write("❌ Não foi possível salvar o modelo")
+            # SALVAR MODELO .pkl
+            if trainer.best_model is not None:
+                # Botão para salvar o modelo
+                if st.button("💾 Salvar Modelo", key="save_model_btn"):
+                    try:
+                        # Criar pasta se não existir
+                        os.makedirs('models', exist_ok=True)
+                        
+                        # Criar nome único com timestamp
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        model_filename = f"modelo_{best_name.replace(' ', '_')}_{timestamp}.pkl"
+                        model_path = f"models/{model_filename}"
+                        
+                        # Salvar modelo
+                        joblib.dump(trainer.best_model, model_path)
+                        
+                        # Verificar se salvou
+                        if os.path.exists(model_path):
+                            file_size = os.path.getsize(model_path)
+                            st.success(f"✅ Modelo salvo: {model_filename} ({file_size} bytes)")
+                            
+                            # Botão para download
+                            with open(model_path, 'rb') as f:
+                                model_bytes = f.read()
+                            
+                            st.download_button(
+                                "⬇️ Baixar Modelo",
+                                model_bytes,
+                                model_filename,
+                                "application/octet-stream",
+                                key=f"download_{timestamp}"
+                            )
+                        else:
+                            st.error("❌ Arquivo não foi criado")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Erro ao salvar: {str(e)}")
+            else:
+                st.info("Nenhum modelo disponível")
         
+        # ⭐⭐ COLUNA 3 - ONDE VOCÊ COLOCA O CÓDIGO DO PDF ⭐⭐
         with col3:
-            if st.button("🔄 Novo"):
+            # GERAR RELATÓRIO PDF - VERSÃO SIMPLES
+            if st.button("📄 Gerar Relatório", key="pdf_report_btn"):
+                with st.spinner("Gerando relatório..."):
+                    try:
+                        # Preparar informações
+                        data_info = {
+                            'dataset_name': 'Dataset Processado',
+                            'n_samples': st.session_state.X.shape[0] if 'X' in st.session_state else 'N/A',
+                            'n_features': st.session_state.X.shape[1] if 'X' in st.session_state else 'N/A'
+                        }
+                        
+                        # Tentar PDF primeiro
+                        pdf_path = PDFReportGenerator.generate_report(
+                            results, 
+                            trainer, 
+                            problem_type,
+                            data_info
+                        )
+                        
+                        # Se PDF falhou, usar TXT
+                        if not pdf_path or not os.path.exists(pdf_path):
+                            st.warning("PDF falhou, gerando TXT...")
+                            pdf_path = PDFReportGenerator.generate_txt_report(
+                                results, trainer, problem_type, data_info
+                            )
+                        
+                        if pdf_path and os.path.exists(pdf_path):
+                            # Ler arquivo
+                            with open(pdf_path, 'rb') as f:
+                                file_bytes = f.read()
+                            
+                            # Determinar tipo MIME
+                            if pdf_path.endswith('.pdf'):
+                                mime_type = "application/pdf"
+                                btn_label = "⬇️ Baixar PDF"
+                                file_ext = "pdf"
+                            else:
+                                mime_type = "text/plain"
+                                btn_label = "⬇️ Baixar TXT"
+                                file_ext = "txt"
+                            
+                            # Botão de download
+                            st.download_button(
+                                btn_label,
+                                file_bytes,
+                                os.path.basename(pdf_path),
+                                mime_type,
+                                key="download_report"
+                            )
+                            
+                            st.success(f"✅ Relatório gerado: {os.path.basename(pdf_path)}")
+                            
+                        else:
+                            st.error("❌ Falha ao gerar relatório")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Erro: {str(e)}")
+        # ⭐⭐ FIM DA COLUNA 3 ⭐⭐
+        
+        with col4:
+            # Botão para novo treinamento
+            if st.button("🔄 Novo", type="primary"):
                 # Limpar estado
                 for key in ['data', 'X', 'y', 'results', 'trainer', 'processed']:
                     if key in st.session_state:
                         del st.session_state[key]
                 st.session_state.step = 1
                 st.rerun()
+        
+        # Seção de arquivos gerados
+        st.markdown("---")
+        with st.expander("📁 Arquivos Gerados"):
+            try:
+                
+                # Listar modelos
+                if os.path.exists('models'):
+                    st.write("**📦 Modelos salvos:**")
+                    model_files = [f for f in os.listdir('models') if f.endswith('.pkl')]
+                    if model_files:
+                        for f in sorted(model_files, reverse=True)[:5]:  # Mostrar últimos 5
+                            st.write(f"- `{f}`")
+                    else:
+                        st.write("(nenhum modelo salvo ainda)")
+                
+                # Listar relatórios
+                if os.path.exists('reports'):
+                    st.write("**📄 Relatórios gerados:**")
+                    report_files = [f for f in os.listdir('reports') if f.endswith(('.pdf', '.txt'))]
+                    if report_files:
+                        for f in sorted(report_files, reverse=True)[:3]:  # Mostrar últimos 3
+                            filepath = os.path.join('reports', f)
+                            filesize = os.path.getsize(filepath)
+                            st.write(f"- `{f}` ({filesize} bytes)")
+                    else:
+                        st.write("(nenhum relatório gerado ainda)")
+                        
+            except Exception as e:
+                st.write(f"Erro ao listar arquivos: {e}")
 
 # ========== EXECUTAR ==========
 if __name__ == "__main__":
