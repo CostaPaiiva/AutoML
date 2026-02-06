@@ -1,0 +1,50 @@
+============================================================
+RELATORIO AUTOML - TODOS OS MODELOS
+============================================================
+
+Data: 06/02/2026 14:22
+Tipo de problema: REGRESSION
+Total de modelos: 4
+Amostras: 569
+Features: 32
+
+============================================================
+MELHOR MODELO
+============================================================
+
+Modelo: Linear Regression
+r2: 0.9848
+
+============================================================
+RANKING COMPLETO
+============================================================
+
+1. Linear Regression - Score: 0.9848
+2. Random Forest - Score: 0.9737
+3. Ridge Regression - Score: 0.9684
+4. Decision Tree - Score: 0.9299
+
+============================================================
+METRICAS POR MODELO
+============================================================
+
+Linear Regression:
+  r2: 0.9848
+
+Ridge Regression:
+  r2: 0.9684
+
+Random Forest:
+  r2: 0.9737
+
+Decision Tree:
+  r2: 0.9299
+
+============================================================
+RECOMENDACOES
+============================================================
+
+• Use o melhor modelo em producao
+• Monitore performance
+• Re-treine regularmente
+• Valide com novos dados
