@@ -21,7 +21,10 @@ git rm --cached modelo.pkl
 git rm --cached -r models/ 2>/dev/null || true
 git rm --cached -r reports/ 2>/dev/null || true
 
-# Agora sim, cancele o merge
-git merge --abort
-
+# Crie/edite .gitignore
+echo ".vscode/" >> .gitignore
+echo "*.pyc" >> .gitignore
+echo "__pycache__/" >> .gitignore
+echo "venv/" >> .gitignore
+echo ".env" >> .gitignore
 
