@@ -307,7 +307,6 @@ class PDFReportGenerator:
             st.error(f"Erro ao gerar TXT: {str(e)}")
             return None
 
-# ========== PROCESSAMENTO DE DADOS POWERFULL PRO ==========
 # ========== DETECTOR INTELIGENTE DE TARGET ==========
     """Detecta automaticamente a coluna target"""
     
@@ -489,7 +488,7 @@ class PDFReportGenerator:
                 return 'regression'
 
 
-# ========== PROCESSAMENTO DE DADOS POWERFULL PRO (ATUALIZADA) ==========
+# ========== PROCESSAMENTO DE DADOS) ==========
 class PowerfulDataProcessor:
     """Processador de dados avançado com feature engineering e detecção automática"""
     
@@ -503,7 +502,7 @@ class PowerfulDataProcessor:
     
     def process(self, data=None, target_col=None, X=None, y=None, problem_type=None, auto_detect=True):
         """
-        Processamento POWERFULL FLEXÍVEL
+        Processamento
         
         Aceita múltiplos formatos:
         1. data + target_col (seu formato original)
@@ -589,7 +588,7 @@ class PowerfulDataProcessor:
                 raise ValueError("❌ Dados insuficientes. Forneça 'data' ou 'X' e 'y'")
             
         except Exception as e:
-            st.error(f"Erro no processamento POWERFULL: {str(e)}")
+            st.error(f"Erro no processamento: {str(e)}")
             return self.simple_fallback(data if data is not None else X, target_col)
     
     def detect_problem_type_smart(self, y):
@@ -845,8 +844,8 @@ class PowerfulDataProcessor:
             y = pd.Series(np.random.randint(0, 2, n_samples))
             return X, y, 'classification'
 
-# ========== TREINAMENTO ULTRA COMPLETO COM VALIDAÇÃO CRUZADA + HOLDOUT ==========
-# ========== TREINAMENTO ULTRA COMPLETO COM VALIDAÇÃO CRUZADA ==========
+
+# ========== TREINAMENTO COM VALIDAÇÃO CRUZADA ==========
 class UltraCompleteTrainer:
     def __init__(self, problem_type):
         self.problem_type = problem_type
@@ -1891,7 +1890,7 @@ class UltraRobustApp:
             st.metric("Target", st.session_state.target_col)
         
         # Processamento DIRETO - sem opções complexas
-        if st.button("mento POWERFULL", type="primary", key="process_execute_btn"):
+        if st.button("Treinamento", type="primary", key="process_execute_btn"):
             with st.spinner("Processando dados..."):
                 try:
                     processor = PowerfulDataProcessor()
@@ -1944,7 +1943,7 @@ class UltraRobustApp:
         # Botão para próximo passo (só aparece após processamento)
         if st.session_state.get('processed', False):
             st.markdown("---")
-            if st.button("🚀 Ir para Treinamento →", type="primary", key="go_to_train_btn"):
+            if st.button(" Ir para Treinamento →", type="primary", key="go_to_train_btn"):
                 st.session_state.step = 3
                 time.sleep(0.5)
                 st.rerun()
@@ -1957,7 +1956,7 @@ class UltraRobustApp:
     
     def step_train(self):
         """Treinamento com fix"""
-        st.header("🚀 Treinamento com VALIDAÇÃO CRUZADA")
+        st.header(" Treinamento com VALIDAÇÃO CRUZADA")
         
         if not st.session_state.get('processed', False):
             st.warning("Dados não processados.")
@@ -1989,7 +1988,7 @@ class UltraRobustApp:
         
         # Configuração em container
         with st.container():
-            st.info("🔬 **VALIDAÇÃO CRUZADA ATIVADA (5-folds)**")
+            st.info(" **VALIDAÇÃO CRUZADA ATIVADA (5-folds)**")
             
             # Configurações da CV SEM expander com key
             with st.expander("⚙️ Configurações da Validação Cruzada"):
@@ -2013,7 +2012,7 @@ class UltraRobustApp:
             st.warning("⚠️ O treinamento testará **15+ modelos** e pode levar alguns minutos.")
             
             # Botão de treinamento PRINCIPAL - apenas um
-            if st.button("🔥 INICIAR TREINAMENTO COMPLETO", type="primary", key="start_training_main_btn"):
+            if st.button(" INICIAR TREINAMENTO COMPLETO", type="primary", key="start_training_main_btn"):
                 self._execute_training()
         
         # Botão de voltar SEPARADO

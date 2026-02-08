@@ -59,7 +59,7 @@ class AdvancedDashboard:
             dbc.Row([
                 # Coluna contendo o título do dashboard
                 dbc.Col([
-                    html.H1("🚀 Dashboard de Machine Learning Avançado",
+                    html.H1(" Dashboard de Machine Learning Avançado",
                             className="text-center mb-4"),
                     html.Hr(),
                 ], width=12)
