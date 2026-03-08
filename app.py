@@ -1355,7 +1355,7 @@ class UltraRobustApp:
 
     def show_progress(self):
         """Barra de progresso simples"""
-        steps = ["📥 Upload", "🔧 Processar", "🚀 Treinar", "📊 Resultados"]
+        steps = [" Upload", " Processar", " Treinar", "📊 Resultados"]
         current = st.session_state.step - 1
 
         html = """
@@ -1375,7 +1375,7 @@ class UltraRobustApp:
 
     def step_upload(self):
         """Upload do dataset SIMPLIFICADO para evitar erro do Streamlit"""
-        st.header("📥 Upload do Dataset")
+        st.header(" Upload do Dataset")
 
         with st.container():
             uploaded_file = st.file_uploader(
@@ -1394,14 +1394,14 @@ class UltraRobustApp:
                 else:
                     data = pd.read_csv(uploaded_file)
 
-                st.success(f"✅ Dataset carregado: {data.shape[0]} linhas × {data.shape[1]} colunas")
+                st.success(f" Dataset carregado: {data.shape[0]} linhas × {data.shape[1]} colunas")
 
-                if st.checkbox("👁️ Visualizar dados", key="show_preview_upload"):
+                if st.checkbox(" Visualizar dados", key="show_preview_upload"):
                     st.dataframe(data.head(), use_container_width=True)
 
-                st.subheader("🎯 Seleção do Target")
+                st.subheader(" Seleção do Target")
 
-                use_auto = st.checkbox("🤖 Usar detecção automática", value=True, key="use_auto_detect")
+                use_auto = st.checkbox(" Usar detecção automática", value=True, key="use_auto_detect")
 
                 if use_auto:
                     try:
@@ -1409,9 +1409,9 @@ class UltraRobustApp:
 
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.metric("🎯 Target", target_col)
+                            st.metric(" Target", target_col)
                         with col2:
-                            st.metric("📊 Tipo", problem_type.upper())
+                            st.metric(" Tipo", problem_type.upper())
 
                         st.session_state.target_col = target_col
                         st.session_state.X = X
@@ -1463,7 +1463,7 @@ class UltraRobustApp:
                     st.session_state.data = data
 
                     st.success(f"✅ Target selecionado: {target_col}")
-                    st.success(f"📊 Tipo: {problem_type.upper()}")
+                    st.success(f" Tipo: {problem_type.upper()}")
 
                 st.markdown("---")
 
@@ -1591,7 +1591,7 @@ class UltraRobustApp:
                 st.rerun()
             return
 
-        with st.expander("📊 Estatísticas do Dataset"):
+        with st.expander(" Estatísticas do Dataset"):
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Amostras", len(st.session_state.X))
@@ -1682,7 +1682,7 @@ class UltraRobustApp:
 
     def step_results(self):
         """Resultados"""
-        st.header("📊 Resultados")
+        st.header(" Resultados")
 
         if 'results' not in st.session_state:
             st.warning("Nenhum resultado disponível.")
@@ -1703,17 +1703,17 @@ class UltraRobustApp:
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("🏆 Melhor Modelo", best_name)
+                    st.metric(" Melhor Modelo", best_name)
                 with col2:
                     if problem_type == 'classification':
                         score = best_metrics.get('accuracy', best_metrics.get('f1', 0))
                     else:
                         score = best_metrics.get('r2', best_metrics.get('explained_variance', 0))
-                    st.metric("🎯 Score", f"{float(score):.4f}")
+                    st.metric(" Score", f"{float(score):.4f}")
                 with col3:
-                    st.metric("🤖 Modelos Treinados", len(results))
+                    st.metric(" Modelos Treinados", len(results))
 
-            with st.expander("🏆 Ranking Completo"):
+            with st.expander(" Ranking Completo"):
                 ranking_df = trainer.get_ranking()
                 ranking_display = ranking_df.copy()
                 if 'Score' in ranking_display.columns:
@@ -1732,7 +1732,7 @@ class UltraRobustApp:
                     st.plotly_chart(fig, use_container_width=True)
 
             if 'best_model' in st.session_state and st.session_state.best_model is not None:
-                with st.expander("📈 Métricas Detalhadas"):
+                with st.expander(" Métricas Detalhadas"):
                     model_options = list(results.keys())
                     selected_model = st.selectbox(
                         "Selecione um modelo para ver métricas detalhadas:",
@@ -1763,12 +1763,12 @@ class UltraRobustApp:
                             st.write(f"**Tempo médio de treino:** {float(metrics.get('fit_time', 0)):.2f}s")
                             st.write(f"**Tempo médio de score:** {float(metrics.get('score_time', 0)):.2f}s")
 
-            st.subheader("💾 Exportar Resultados")
+            st.subheader(" Exportar Resultados")
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                if st.button("📊 Exportar CSV", key="export_csv_results_btn"):
+                if st.button(" Exportar CSV", key="export_csv_results_btn"):
                     try:
                         ranking_df = trainer.get_ranking()
                         csv_data = ranking_df.to_csv(index=False).encode('utf-8')
@@ -1784,7 +1784,7 @@ class UltraRobustApp:
                         st.error(f"Erro CSV: {e}")
 
             with col2:
-                if st.button("💾 Salvar Modelo", key="save_model_results_btn"):
+                if st.button(" Salvar Modelo", key="save_model_results_btn"):
                     if trainer.best_model is not None:
                         try:
                             os.makedirs('models', exist_ok=True)
@@ -1810,7 +1810,7 @@ class UltraRobustApp:
                             st.error(f"❌ Erro ao salvar: {str(e)}")
 
             with col3:
-                if st.button("📄 Gerar Relatório", key="generate_report_btn"):
+                if st.button(" Gerar Relatório", key="generate_report_btn"):
                     with st.spinner("Gerando relatório..."):
                         try:
                             data_info = {
@@ -1855,7 +1855,7 @@ class UltraRobustApp:
                     st.rerun()
 
             with col2:
-                if st.button("🔄 Novo Dataset", type="primary", key="new_dataset_btn"):
+                if st.button(" Novo Dataset", type="primary", key="new_dataset_btn"):
                     training_keys = ['results', 'trainer', 'best_model', 'processed', 'X', 'y',
                                      'problem_type', 'auto_detected', 'target_col', 'data']
                     for key in training_keys:
@@ -1868,7 +1868,7 @@ class UltraRobustApp:
 
         except Exception as e:
             st.error(f"❌ Erro nos resultados: {str(e)}")
-            if st.button("🔄 Reiniciar Aplicação", key="restart_app_results"):
+            if st.button(" Reiniciar Aplicação", key="restart_app_results"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
@@ -1903,4 +1903,4 @@ if __name__ == "__main__":
         app.run()
     except Exception as e:
         st.error(f"❌ Erro crítico na aplicação: {str(e)}")
-        st.button("🔄 Reiniciar Aplicação", key="restart_app_final", on_click=lambda: st.rerun())
+        st.button(" Reiniciar Aplicação", key="restart_app_final", on_click=lambda: st.rerun())
