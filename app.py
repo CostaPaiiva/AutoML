@@ -100,66 +100,103 @@ class PDFReportGenerator:
             try:
                 from fpdf import FPDF
 
+                # Inicializa um novo documento PDF
                 pdf = FPDF()
+                # Adiciona uma nova página ao documento
                 pdf.add_page()
 
+                # Define a fonte e adiciona o título principal do relatório
                 pdf.set_font("Arial", 'B', 16)
                 pdf.cell(0, 10, "RELATORIO AUTOML PRO", ln=True, align='C')
                 pdf.ln(5)
 
+                # Define a fonte para informações menores e adiciona a data e hora de geração do relatório
                 pdf.set_font("Arial", '', 10)
                 pdf.cell(0, 10, f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
                 pdf.ln(10)
 
+                # Adiciona um subtítulo para as informações do projeto
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, "INFORMACOES DO PROJETO", ln=True)
                 pdf.set_font("Arial", '', 10)
 
+                # Se houver informações do dataset, adiciona-as ao PDF
                 if data_info:
                     pdf.cell(0, 10, f"Dataset: {data_info.get('dataset_name', 'N/A')}", ln=True)
                     pdf.cell(0, 10, f"Amostras: {data_info.get('n_samples', 'N/A')}", ln=True)
                     pdf.cell(0, 10, f"Features: {data_info.get('n_features', 'N/A')}", ln=True)
 
+                # Adiciona o tipo de problema e o número total de modelos treinados
                 pdf.cell(0, 10, f"Tipo de problema: {problem_type.upper()}", ln=True)
                 pdf.cell(0, 10, f"Total de modelos treinados: {len(results)}", ln=True)
                 pdf.ln(10)
 
+                # Adiciona um subtítulo para o melhor modelo
+                # Obtém o nome do melhor modelo a partir do objeto 'trainer'
                 best_name = trainer.best_model_name
+                # Verifica se o nome do melhor modelo existe e se está presente nos resultados
                 if best_name and best_name in results:
+                    # Define a fonte para o subtítulo "MELHOR MODELO" (Arial, negrito, tamanho 12)
                     pdf.set_font("Arial", 'B', 12)
+                    # Adiciona o subtítulo "MELHOR MODELO" ao PDF, centralizado e com quebra de linha
                     pdf.cell(0, 10, "MELHOR MODELO", ln=True)
+                    # Define a fonte para as informações do modelo (Arial, normal, tamanho 10)
                     pdf.set_font("Arial", '', 10)
 
+
+                    # Obtém as métricas do melhor modelo a partir do dicionário de resultados
                     best_metrics = results[best_name]
+                    # Adiciona o nome do melhor modelo ao PDF
                     pdf.cell(0, 10, f"Modelo: {best_name}", ln=True)
 
+                    # Verifica o tipo de problema (classificação ou regressão) para exibir a métrica principal correta
                     if problem_type == 'classification':
+                        # Para classificação, tenta obter a acurácia ou um score genérico
                         score = best_metrics.get('accuracy', best_metrics.get('score', 0))
+                        # Adiciona a acurácia formatada ao PDF
                         pdf.cell(0, 10, f"Acuracia: {score:.4f}", ln=True)
                     else:
+                        # Para regressão, tenta obter o R2 Score ou um score genérico
                         score = best_metrics.get('r2', best_metrics.get('score', 0))
+                        # Adiciona o R2 Score formatado ao PDF
                         pdf.cell(0, 10, f"R2 Score: {score:.4f}", ln=True)
 
+                    # Adiciona uma quebra de linha com espaçamento ao PDF para separação visual
                     pdf.ln(10)
 
+                # Define a fonte para o subtítulo "RANKING DOS MODELOS" (Arial, negrito, tamanho 12)
                 pdf.set_font("Arial", 'B', 12)
+                # Adiciona o subtítulo "RANKING DOS MODELOS" ao PDF, com quebra de linha
                 pdf.cell(0, 10, "RANKING DOS MODELOS", ln=True)
+                # Define a fonte para as informações do ranking (Arial, normal, tamanho 10)
                 pdf.set_font("Arial", '', 10)
 
+                # Obtém o DataFrame de ranking de modelos a partir do objeto 'trainer'
                 ranking_df = trainer.get_ranking()
 
+                # Define a cor de preenchimento para o cabeçalho da tabela (cinza claro)
                 pdf.set_fill_color(240, 240, 240)
+                # Adiciona a célula "Posicao" ao cabeçalho da tabela, com borda e preenchimento
                 pdf.cell(30, 10, "Posicao", border=1, fill=True)
+                # Adiciona a célula "Modelo" ao cabeçalho da tabela, com borda e preenchimento
                 pdf.cell(80, 10, "Modelo", border=1, fill=True)
+                # Adiciona a célula "Score" ao cabeçalho da tabela, com borda, preenchimento e quebra de linha
                 pdf.cell(45, 10, "Score", border=1, fill=True, ln=True)
 
+                # Itera sobre cada linha do DataFrame de ranking
                 for _, row in ranking_df.iterrows():
+                    # Converte a posição do ranking para string
                     pos = str(row['Posição'])
+                    # Converte o nome do modelo para string e limita a 35 caracteres
                     model = str(row['Modelo'])
+                    # Formata o score do modelo para 4 casas decimais e converte para string
                     score = f"{float(row['Score']):.4f}"
 
+                    # Adiciona a célula da posição ao PDF, com borda
                     pdf.cell(30, 10, pos, border=1)
+                    # Adiciona a célula do nome do modelo (truncado) ao PDF, com borda
                     pdf.cell(80, 10, model[:35], border=1)
+                    # Adiciona a célula do score ao PDF, com borda e quebra de linha
                     pdf.cell(45, 10, score, border=1, ln=True)
 
                 pdf.ln(10)
