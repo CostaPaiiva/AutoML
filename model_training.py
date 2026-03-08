@@ -237,25 +237,40 @@ class AdvancedModelTrainer:
 
                 # Otimização para XGBoost
                 if model_name == 'XGBoost':
+                    # Define os parâmetros a serem otimizados para o XGBoost Regressor
                     param = {
+                        # Sugere um número de estimadores (árvores) entre 50 e 300
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                        # Sugere a profundidade máxima da árvore entre 3 e 10
                         'max_depth': trial.suggest_int('max_depth', 3, 10),
+                        # Sugere a taxa de aprendizado entre 0.01 e 0.3 (escala logarítmica)
                         'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                        # Sugere a fração de amostras a serem usadas para treinar cada árvore (subsample) entre 0.5 e 1.0
                         'subsample': trial.suggest_float('subsample', 0.5, 1.0),
+                        # Sugere a fração de features a serem usadas para treinar cada árvore (colsample_bytree) entre 0.5 e 1.0
                         'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
                     }
+                    # Cria uma instância do XGBoost Regressor com os parâmetros sugeridos pelo Optuna
                     model = xgb.XGBRegressor(**param, random_state=42)
 
                 # Otimização para RandomForestRegressor
                 elif model_name == 'RandomForestRegressor':
+                    # Define os parâmetros a serem otimizados para o RandomForestRegressor
                     param = {
+                        # Sugere um número de estimadores (árvores) entre 50 e 300
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                        # Sugere a profundidade máxima da árvore entre 3 e 20
                         'max_depth': trial.suggest_int('max_depth', 3, 20),
+                        # Sugere o número mínimo de amostras para dividir um nó interno entre 2 e 20
                         'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                        # Sugere o número mínimo de amostras em um nó folha entre 1 e 10
                         'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+                        # Sugere a estratégia para escolher o número de features a serem consideradas ao procurar a melhor divisão
                         'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2', None]),
                     }
+                    # Cria uma instância do RandomForestRegressor com os parâmetros sugeridos pelo Optuna
                     model = RandomForestRegressor(**param, random_state=42)
+
 
             # Se o modelo não foi definido, retorna infinito negativo
             if model is None:
@@ -405,17 +420,26 @@ class AdvancedModelTrainer:
 
         # Se for classificação
         if self.problem_type == 'classification':
+            # Calcula a acurácia do modelo
             metrics['accuracy'] = accuracy_score(y_true, y_pred)
+            # Calcula a precisão ponderada do modelo
             metrics['precision'] = precision_score(y_true, y_pred, average='weighted', zero_division=0)
+            # Calcula a revocação ponderada do modelo
             metrics['recall'] = recall_score(y_true, y_pred, average='weighted', zero_division=0)
+            # Calcula a pontuação F1 ponderada do modelo
             metrics['f1'] = f1_score(y_true, y_pred, average='weighted', zero_division=0)
 
             try:
+                # Obtém as classes únicas presentes nos dados verdadeiros
                 unique_classes = np.unique(y_true)
 
+                # Verifica se os scores de predição foram fornecidos
                 if y_score is not None:
+                    # Se houver mais de duas classes (problema de classificação multiclasse)
                     if len(unique_classes) > 2:
+                        # Verifica se y_score é um array NumPy com 2 dimensões
                         if isinstance(y_score, np.ndarray) and y_score.ndim == 2:
+                            # Calcula a pontuação ROC AUC para classificação multiclasse usando a estratégia 'one-vs-rest' e média ponderada
                             metrics['roc_auc'] = roc_auc_score(
                                 y_true,
                                 y_score,
@@ -423,22 +447,32 @@ class AdvancedModelTrainer:
                                 average='weighted'
                             )
                         else:
+                            # Se y_score não for um array 2D, define ROC AUC como NaN
                             metrics['roc_auc'] = np.nan
                     else:
+                        # Se houver apenas duas classes (problema de classificação binária)
                         if isinstance(y_score, np.ndarray):
+                            # Verifica se y_score é um array NumPy com 2 dimensões e pelo menos 2 colunas
                             if y_score.ndim == 2 and y_score.shape[1] >= 2:
+                                # Calcula a pontuação ROC AUC para classificação binária usando a segunda coluna de probabilidades
                                 metrics['roc_auc'] = roc_auc_score(y_true, y_score[:, 1])
                             else:
+                                # Se y_score não for um array 2D com pelo menos 2 colunas, usa y_score diretamente
                                 metrics['roc_auc'] = roc_auc_score(y_true, y_score)
                         else:
+                            # Se y_score não for um array NumPy, define ROC AUC como NaN
                             metrics['roc_auc'] = np.nan
                 else:
+                    # Se y_score for None, define ROC AUC como NaN
                     metrics['roc_auc'] = np.nan
 
             except Exception:
+                # Em caso de qualquer erro durante o cálculo do ROC AUC, define como NaN
                 metrics['roc_auc'] = np.nan
 
+            # Calcula a matriz de confusão
             cm = confusion_matrix(y_true, y_pred)
+            # Armazena a matriz de confusão nas métricas
             metrics['confusion_matrix'] = cm
 
         # Se for regressão
