@@ -1,323 +1,411 @@
-🤖 AutoML - Sistema Automático de Machine Learning
+# 🤖 AutoML
 
-Sistema completo e robusto para processamento automático de dados e treinamento de múltiplos modelos de Machine Learning com interface web intuitiva.
+Sistema de **AutoML com interface web em Streamlit** para ingestão de datasets tabulares, detecção automática do tipo de problema, processamento inteligente de dados, treinamento massivo de modelos de Machine Learning, comparação de desempenho, exportação de artefatos e geração de relatórios.
 
-✨ Funcionalidades Principais
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.8%2B-blue">
+  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-red">
+  <img alt="Scikit-Learn" src="https://img.shields.io/badge/Scikit--Learn-ML-orange">
+  <img alt="Plotly" src="https://img.shields.io/badge/Plotly-Interactive%20Charts-6f42c1">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
+</p>
 
-🔍 Processamento Inteligente
+---
 
-✅ Upload automático de arquivos CSV, TXT e Excel
+## Visão geral
 
-✅ Detecção automática do tipo de problema (Classificação/Regressão)
+O **AutoML** foi criado para reduzir o trabalho manual na construção de modelos supervisionados. Em vez de exigir scripts separados para limpeza, transformação, treinamento, avaliação e exportação, a aplicação centraliza todo o fluxo em uma experiência visual e orientada por etapas.
 
-✅ Limpeza inteligente de dados (missing values, outliers, duplicatas)
+O sistema permite:
 
-✅ Codificação automática de variáveis categóricas
+- carregar datasets tabulares;
+- detectar automaticamente o tipo de problema;
+- processar dados com limpeza, imputação, encoding, escalonamento e seleção de atributos;
+- treinar dezenas de algoritmos em paralelo;
+- comparar métricas com validação cruzada;
+- selecionar e salvar o melhor modelo;
+- exportar ranking, modelo treinado e relatório final.
 
-✅ Normalização e escalonamento de features
+---
 
-🤖 Machine Learning Avançado
-✅ 4+ algoritmos por tipo de problema
+## Principais funcionalidades
 
-✅ Treinamento paralelo de múltiplos modelos
+### Upload e leitura de dados
+- Upload de arquivos via interface web.
+- Suporte a dados tabulares em formatos como **CSV, TXT e Excel**.
+- Pré-visualização do dataset antes do processamento.
+- Seleção manual ou detecção automática da coluna alvo (*target*).
 
-✅ Validação cruzada automática
+### Processamento inteligente
+- Remoção de duplicatas.
+- Tratamento de valores infinitos e ausentes.
+- Remoção de colunas com alta taxa de dados faltantes.
+- Tratamento de outliers para datasets menores.
+- Codificação automática de variáveis categóricas.
+- Escalonamento de atributos numéricos.
+- Engenharia de atributos com combinações e estatísticas derivadas.
+- Seleção automática das melhores features.
 
-✅ Seleção do melhor modelo baseado em métricas
+### Treinamento automatizado
+- Detecção de **classificação** ou **regressão**.
+- Treinamento massivo de múltiplos algoritmos.
+- Validação cruzada configurável.
+- Estratégias diferentes para classificação e regressão.
+- Ranqueamento dos modelos com base em métricas objetivas.
+- Criação de ensembles.
+- Otimização de hiperparâmetros para modelos de topo.
 
-✅ Ranking completo dos modelos treinados
+### Resultados e exportação
+- Ranking completo dos modelos treinados.
+- Métricas detalhadas por algoritmo.
+- Gráficos interativos com Plotly.
+- Exportação do ranking em CSV.
+- Salvamento do melhor modelo em `.pkl`.
+- Geração de relatório em **PDF** ou fallback em **TXT**.
 
-📊 Dashboard Interativo
+---
 
-✅ Visualizações com Plotly
+## Modelos suportados
 
-✅ Métricas detalhadas por modelo
+O projeto implementa um conjunto amplo de algoritmos para problemas supervisionados.
 
-✅ Gráficos comparativos
+### Classificação
+- Logistic Regression
+- Ridge Classifier
+- SGD Classifier
+- SVC / NuSVC / LinearSVC
+- KNeighbors Classifier / RadiusNeighbors Classifier
+- Decision Tree / Extra Tree
+- Random Forest
+- Gradient Boosting
+- AdaBoost
+- Bagging
+- Extra Trees
+- HistGradientBoosting
+- GaussianNB / BernoulliNB / MultinomialNB
+- Linear Discriminant Analysis
+- Quadratic Discriminant Analysis
+- MLP Classifier
+- XGBoost
+- LightGBM
+- CatBoost
+- Voting Classifier
 
-✅ Exportação de resultados (CSV, modelos, relatórios)
+### Regressão
+- Linear Regression
+- Ridge
+- Lasso
+- ElasticNet
+- SGD Regressor
+- SVR / NuSVR / LinearSVR
+- KNeighbors Regressor / RadiusNeighbors Regressor
+- Decision Tree Regressor / Extra Tree Regressor
+- Random Forest Regressor
+- Gradient Boosting Regressor
+- AdaBoost Regressor
+- Bagging Regressor
+- Extra Trees Regressor
+- HistGradientBoosting Regressor
+- Kernel Ridge
+- MLP Regressor
+- XGBoost Regressor
+- LightGBM Regressor
+- CatBoost Regressor
+- Voting Regressor
 
-✅ Interface responsiva e amigável
+---
 
-🚀 Começando
+## Métricas avaliadas
 
-Pré-requisitos
+### Classificação
+- Accuracy
+- F1 Score
+- Precision
+- Recall
+- ROC AUC
+- Desvio padrão dos folds
+- Tempo médio de treino e score
 
-Python 3.8 ou superior
+### Regressão
+- R² Score
+- RMSE
+- MAE
+- Explained Variance
+- Desvio padrão dos folds
+- Tempo médio de treino e score
 
-pip (gerenciador de pacotes Python)
+---
 
-Instalação
-Clone o repositório ou baixe os arquivos
+## Interface da aplicação
 
-bash
+A aplicação principal foi desenvolvida em **Streamlit** e organizada em etapas, o que torna o fluxo mais claro para o usuário:
+
+1. **Upload do dataset**  
+   Envio do arquivo e inspeção inicial dos dados.
+
+2. **Seleção/detecção do target**  
+   Escolha manual da variável alvo ou uso da detecção automática.
+
+3. **Processamento de dados**  
+   Limpeza, transformação, engenharia e seleção de atributos.
+
+4. **Treinamento com validação cruzada**  
+   Configuração do número de folds, estratégia de CV e paralelismo.
+
+5. **Resultados**  
+   Exibição do melhor modelo, métricas, ranking e opções de exportação.
+
+---
+
+## 🏗️ Arquitetura do projeto
+
+```bash
+AutoML/
+├── app.py
+├── dashboard.py
+├── data_processing.py
+├── model_training.py
+├── report_generator.py
+├── requirements.txt
+├── LICENSE
+├── .gitignore
+├── models/
+│   └── *.pkl
+├── reports/
+│   └── relatorio_automl_*.txt / *.pdf
+└── README.md
+```
+
+### Responsabilidade dos módulos
+
+#### `app.py`
+Arquivo principal da aplicação Streamlit. Reúne a interface, o fluxo da aplicação, o treinamento, o ranking e as exportações.
+
+#### `data_processing.py`
+Implementa o pipeline de preparação de dados, incluindo limpeza, imputação, encoding, escalonamento e seleção de features.
+
+#### `model_training.py`
+Contém o motor de treinamento automatizado, avaliação, ranking, ensemble e otimização de hiperparâmetros.
+
+#### `dashboard.py`
+Disponibiliza um dashboard avançado com **Dash + Plotly** para análise visual dos resultados.
+
+#### `report_generator.py`
+Responsável pela geração de relatórios detalhados em PDF com estrutura executiva.
+
+---
+
+## Tecnologias utilizadas
+
+- **Python** — linguagem principal
+- **Streamlit** — interface web interativa
+- **Scikit-learn** — modelos, métricas e pré-processamento
+- **Pandas** — manipulação de dados
+- **NumPy** — operações numéricas
+- **Plotly** — visualizações interativas
+- **Joblib** — serialização de modelos
+- **Optuna** — otimização de hiperparâmetros
+- **XGBoost** — gradient boosting avançado
+- **LightGBM** — boosting eficiente
+- **CatBoost** — boosting para dados tabulares
+- **Dash + Bootstrap Components** — dashboard adicional
+- **FPDF / ReportLab / Matplotlib** — geração de relatórios
+
+---
+
+## Como executar localmente
+
+### 1) Clone o repositório
+
+```bash
 git clone https://github.com/CostaPaiiva/AutoML.git
+cd AutoML
+```
 
-Instale as dependências
+### 2) Crie e ative um ambiente virtual
 
-bash
+**Windows**
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+**Linux / macOS**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3) Instale as dependências
+
+```bash
 pip install -r requirements.txt
+```
 
-Execute o sistema
+### 4) Execute a aplicação
 
-bash
+```bash
 streamlit run app.py
+```
 
-Acesse no navegador
+### 5) Acesse no navegador
 
-text
+```text
 http://localhost:8501
+```
 
-Passo 1: Upload do Dataset
+---
 
-Clique em "Escolha um arquivo CSV"
+## 📥 Requisitos
 
-Selecione seu dataset (CSV, TXT ou Excel)
+O arquivo `requirements.txt` atual contém as dependências essenciais abaixo:
 
-O sistema mostrará uma pré-visualização
+```txt
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+plotly>=5.14.0
+joblib>=1.3.0
+```
 
-Passo 2: Configuração
-Selecione a coluna target (variável a ser prevista)
+### Dependências adicionais recomendadas
 
-Ajuste configurações avançadas se necessário
+Como o código também usa bibliotecas extras para treinamento avançado, dashboard e relatórios, recomenda-se instalar adicionalmente:
 
-Clique em "Processar Dados"
+```bash
+pip install optuna xgboost lightgbm catboost dash dash-bootstrap-components fpdf2 reportlab matplotlib openpyxl
+```
 
-Passo 3: Treinamento
-Revise as informações do processamento
+> **Observação:** o código-fonte importa mais bibliotecas do que as listadas atualmente em `requirements.txt`. Para rodar todos os recursos do projeto sem erros de importação, é importante complementar essas dependências.
 
-Clique em "Iniciar Treinamento"
+---
 
-Aguarde enquanto os modelos são treinados
+## Fluxo de uso
 
-Passo 4: Resultados
-Analise o ranking dos modelos
+```text
+Upload do arquivo
+   ↓
+Seleção ou detecção do target
+   ↓
+Detecção do tipo de problema
+   ↓
+Pré-processamento automático
+   ↓
+Treinamento com validação cruzada
+   ↓
+Ranking dos modelos
+   ↓
+Exportação do melhor modelo e dos relatórios
+```
 
-Visualize gráficos comparativos
+---
 
-Exporte os resultados
+## Saídas geradas
 
-Baixe o melhor modelo treinado
+Durante o uso do sistema, podem ser gerados artefatos como:
 
-🔧 Tecnologias Utilizadas
-Python 3.8+ - Linguagem principal
+- **Modelos serializados** em `.pkl`
+- **Relatórios** em `.pdf` ou `.txt`
+- **Ranking** de modelos em `.csv`
 
-Streamlit - Framework para aplicações web
+Esses artefatos facilitam auditoria, reaproveitamento e integração com outros fluxos de ML.
 
-Scikit-learn - Machine Learning
+---
 
-Pandas - Manipulação de dados
+## Casos de uso
 
-NumPy - Computação numérica
+O AutoML pode ser aplicado em diferentes cenários, como:
 
-Plotly - Visualizações interativas
+- previsão de churn;
+- classificação de clientes, produtos ou eventos;
+- detecção de fraude;
+- previsão de preços, vendas ou demanda;
+- comparação rápida de modelos em projetos acadêmicos;
+- prototipagem de soluções de Machine Learning para MVPs.
 
-Joblib - Serialização de modelos
+---
 
-📊 Modelos Implementados:
+## Pontos fortes do projeto
 
-Para Classificação:
+- Interface amigável para usuários iniciantes e intermediários.
+- Pipeline automatizado de ponta a ponta.
+- Ampla cobertura de algoritmos.
+- Comparação objetiva entre modelos.
+- Exportação facilitada de resultados.
+- Estrutura modular, com separação entre interface, processamento, treino e relatório.
 
-✅ Logistic Regression
+---
 
-✅ Random Forest Classifier
+## Limitações e melhorias sugeridas
 
-✅ Decision Tree Classifier
+Embora o projeto esteja bem estruturado para estudo e prototipagem, há oportunidades claras de evolução:
 
-✅ Naive Bayes (Gaussian)
+- consolidar todas as dependências no `requirements.txt`;
+- adicionar testes automatizados;
+- incluir exemplos de datasets e screenshots no repositório;
+- versionar pipelines de inferência separadamente;
+- documentar melhor os formatos esperados de entrada;
+- adicionar deploy em nuvem;
+- criar API para inferência em produção.
 
-Para Regressão:
+---
 
-✅ Linear Regression
+## Roadmap sugerido
 
-✅ Ridge Regression
+- [ ] Criar arquivo `requirements` completo
+- [ ] Adicionar inferência com novo dataset
+- [ ] Incluir explicabilidade com SHAP ou LIME
+- [ ] Publicar demo em Streamlit Cloud
+- [ ] Criar endpoint REST para previsão
+- [ ] Adicionar monitoramento de performance do modelo
+- [ ] Incluir persistência de experimentos
 
-✅ Random Forest Regressor
+---
 
-✅ Decision Tree Regressor
+## Contribuição
 
-📈 Métricas de Avaliação:
+Contribuições são bem-vindas.
 
-Classificação
+1. Faça um fork do projeto.
+2. Crie uma branch para sua feature:
 
-Acurácia - Porcentagem de previsões corretas
+```bash
+git checkout -b feature/minha-melhoria
+```
 
-F1-Score - Média harmônica entre precisão e recall
+3. Commit suas alterações:
 
-Validação Cruzada - Score médio em múltiplos folds
+```bash
+git commit -m "feat: adiciona melhoria X"
+```
 
-Regressão
-R² Score - Qualidade do ajuste do modelo
+4. Envie para o repositório remoto:
 
-RMSE - Raiz do erro quadrático médio
+```bash
+git push origin feature/minha-melhoria
+```
 
-Validação Cruzada - Score médio em múltiplos folds
+5. Abra um Pull Request.
 
-🎯 Casos de Uso
-1. Análise Preditiva
-text
-- Previsão de churn de clientes
-- Detecção de fraudes
-- Classificação de sentimentos
+---
 
-2. Regressão de Valores
-text
-- Previsão de preços de imóveis
-- Estimativa de vendas
-- Previsão de demanda
+## Licença
 
-3. Pesquisa Acadêmica
-text
-- Experimentos com diferentes algoritmos
-- Comparação de modelos
-- Análise exploratória de dados
+Este projeto está licenciado sob os termos da **MIT License**. Consulte o arquivo `LICENSE` para mais detalhes.
 
-4. Prototipagem Rápida
-text
-- MVP de soluções de ML
-- Testes com novos datasets
-- Validação de hipóteses
-🔍 Exemplos de Datasets
-Dataset de Demonstração (Iris)
-python
-# Características: 4 features numéricas
-# Target: 3 classes de flores
-# Tamanho: 150 amostras
-# Tipo: Classificação Multiclasse
-Para Testar:
-Iris Dataset - Classificação de flores
+---
 
-Diabetes Dataset - Regressão (valores contínuos)
+## 👨‍💻 Autor
 
-Titanic Dataset - Classificação binária
+Desenvolvido por **CostaPaiiva**.
 
-Boston Housing - Regressão de preços
+Se este projeto foi útil para você, deixe uma estrela no repositório.
 
-⚙️ Configurações Avançadas
-Opções Disponíveis:
-Escalonamento de Features - Ativar/desativar normalização
+---
 
-Tamanho do Teste - 20% padrão (ajustável no código)
+## Aviso
 
-Número de Folds - Validação cruzada com 3 folds
-
-Paralelismo - Usa todos os núcleos da CPU disponíveis
-
-Personalização:
-python
-# No arquivo app.py, você pode modificar:
-
-# 1. Adicionar novos modelos
-models['Novo Modelo'] = SeuModelo(parametros)
-
-# 2. Alterar métricas de avaliação
-scoring = 'f1'  # Em vez de 'accuracy'
-
-# 3. Ajustar tamanho do split
-test_size = 0.3  # 30% para teste
-
-📤 Exportação de Resultados
-1. CSV do Ranking
-csv
-Posição,Modelo,Score
-1,Random Forest,0.95
-2,Logistic Regression,0.92
-3,Decision Tree,0.89
-2. Modelo Treinado
-Formato: .pkl (Joblib)
-
-Pode ser carregado em produção
-
-Inclui todos os parâmetros otimizados
-
-3. Relatório de Análise
-Métricas detalhadas
-
-Configurações usadas
-
-Recomendações
-
-🚨 Solução de Problemas
-Erro Comum 1: "No columns to parse from file"
-Solução: Verifique se o arquivo CSV está bem formatado e tem delimitadores corretos.
-
-Erro Comum 2: "Memory Error"
-Solução:
-
-Reduza o tamanho do dataset
-
-Use .sample() para testar com menos dados
-
-Aumente a memória disponível
-
-Erro Comum 3: "ValueError with stratify"
-Solução: O sistema detecta automaticamente e usa split sem stratify quando necessário.
-
-Erro Comum 4: "ImportError"
-Solução: Instale todas as dependências:
-
-bash
-pip install -r requirements.txt --upgrade
-📊 Benchmark de Performance
-Dataset Size	Tempo de Processamento	Tempo de Treinamento
-1,000 linhas	2-5 segundos	10-20 segundos
-10,000 linhas	5-10 segundos	30-60 segundos
-100,000 linhas	15-30 segundos	2-5 minutos
-Testado em CPU Intel i7 com 16GB RAM
-
-🔮 Roadmap de Melhorias
-Versão 2.0 (Planejada)
-Deep Learning - Redes neurais integradas
-
-AutoML Avançado - Otimização automática de hiperparâmetros
-
-Explainable AI - Explicabilidade dos modelos (SHAP/LIME)
-
-Big Data - Suporte a datasets muito grandes
-
-Deploy Cloud - Integração com AWS/GCP/Azure
-
-Versão 1.5 (Em Desenvolvimento)
-Mais Modelos - XGBoost, LightGBM, CatBoost
-
-Balanceamento - Técnicas para dados desbalanceados
-
-Feature Engineering - Automático avançado
-
-API REST - Para integração com outros sistemas
-
-🤝 Contribuindo
-Contribuições são bem-vindas! Siga estes passos:
-
-Fork o projeto
-
-Crie uma branch para sua feature (git checkout -b feature/AmazingFeature)
-
-Commit suas mudanças (git commit -m 'Add some AmazingFeature')
-
-Push para a branch (git push origin feature/AmazingFeature)
-
-Abra um Pull Request
-
-Diretrizes de Código
-Siga o padrão PEP 8
-
-Adicione docstrings para novas funções
-
-Inclua testes quando possível
-
-Mantenha a compatibilidade com versões anteriores
-
-📝 Licença
-Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para detalhes.
-
-
-⚠️ NOTA: ESTE É UM SISTEMA EDUCACIONAL PARA FINS DE ESTUDO
-
-
-
-##  **Próximos passos:**
-
-1. **Teste com diferentes datasets** para ver como se comporta
-2. **Criar uma versão para deploy** no Streamlit Cloud
-3. **Adicionar mais visualizações** de dados
+Este projeto foi desenvolvido **para fins de estudo, aprendizado e experimentação**.
