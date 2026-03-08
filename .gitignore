@@ -1,5 +1,7 @@
 # Ambiente virtual
 venv/
+models/
+reports/
 
 # Arquivos compilados
 __pycache__/
