@@ -1,15 +1,28 @@
+# Importa a biblioteca Streamlit para criar a interface web
 import streamlit as st
+# Importa a biblioteca Pandas para manipulação e análise de dados
 import pandas as pd
+# Importa a biblioteca NumPy para operações numéricas, especialmente com arrays
 import numpy as np
+# Importa a biblioteca Plotly Express para criar visualizações interativas de forma simples
 import plotly.express as px
+# Importa a biblioteca Plotly Graph Objects para criar gráficos mais complexos e customizados
 import plotly.graph_objects as go
+# Importa a biblioteca Time para funcionalidades relacionadas ao tempo, como pausas
 import time
+# Importa a biblioteca Base64 para codificação e decodificação de dados
 import base64
+# Importa a biblioteca Joblib para salvar e carregar modelos de Machine Learning de forma eficiente
 import joblib
+# Importa a classe datetime do módulo datetime para trabalhar com datas e horas
 from datetime import datetime
+# Importa o módulo OS para interagir com o sistema operacional, como criar diretórios
 import os
+# Importa a biblioteca warnings para controlar avisos de depreciação ou outros
 import warnings
+# Ignora todos os avisos para manter a saída limpa
 warnings.filterwarnings('ignore')
+
 
 # ========== CONFIGURAÇÃO DA PÁGINA ==========
 st.set_page_config(
