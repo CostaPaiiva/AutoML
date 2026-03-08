@@ -353,7 +353,7 @@ class PDFReportGenerator:
             confidence = 0.1
         else:
             # Mostrar opções
-            st.write("🎯 **Candidatos detectados:**")
+            st.write(" **Candidatos detectados:**")
             for i, (col, score) in enumerate(sorted_scores[:5]):
                 st.write(f"{i+1}. **{col}** (score: {score:.2f})")
             
@@ -1696,7 +1696,7 @@ class UltraRobustApp:
                     self.step_results()
             except Exception as e:
                 st.error(f"❌ Erro na etapa {st.session_state.step}: {str(e)}")
-                if st.button("🔄 Reiniciar Aplicação", key="restart_app_error"):
+                if st.button(" Reiniciar Aplicação", key="restart_app_error"):
                     self.reset_app()
                 
         except Exception as e:
@@ -1705,7 +1705,7 @@ class UltraRobustApp:
     
     def show_progress(self):
         """Barra de progresso simples"""
-        steps = ["📥 Upload", "🔧 Processar", "🚀 Treinar", "📊 Resultados"]
+        steps = ["📥 Upload", "Processar", "Treinar", "Resultados"]
         current = st.session_state.step - 1
         
         # Usar HTML para evitar recriação de componentes
@@ -1754,10 +1754,10 @@ class UltraRobustApp:
                     st.dataframe(data.head(), use_container_width=True)
                 
                 # SELEÇÃO DE TARGET SIMPLIFICADA
-                st.subheader("🎯 Seleção do Target")
+                st.subheader(" Seleção do Target")
                 
                 # Opção direta - sem rádio para evitar recriação
-                use_auto = st.checkbox("🤖 Usar detecção automática", value=True, key="use_auto_detect")
+                use_auto = st.checkbox("Usar detecção automática", value=True, key="use_auto_detect")
                 
                 if use_auto:
                     # Tenta detecção automática
@@ -1766,9 +1766,9 @@ class UltraRobustApp:
                         
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.metric("🎯 Target", target_col)
+                            st.metric("Target", target_col)
                         with col2:
-                            st.metric("📊 Tipo", problem_type.upper())
+                            st.metric("Tipo", problem_type.upper())
                         
                         # Salvar no estado
                         st.session_state.target_col = target_col
@@ -1827,7 +1827,7 @@ class UltraRobustApp:
                     st.session_state.data = data
                     
                     st.success(f"✅ Target selecionado: {target_col}")
-                    st.success(f"📊 Tipo: {problem_type.upper()}")
+                    st.success(f" Tipo: {problem_type.upper()}")
                 
                 # Botões SIMPLES e ÚNICOS
                 st.markdown("---")
@@ -1844,7 +1844,7 @@ class UltraRobustApp:
                         st.rerun()
                 
                 with col2:
-                    if st.button("🔧 Continuar →", type="primary", key="continue_upload_btn"):
+                    if st.button(" Continuar →", type="primary", key="continue_upload_btn"):
                         if 'target_col' not in st.session_state:
                             st.error("❌ Selecione um target primeiro!")
                         else:
@@ -1870,7 +1870,7 @@ class UltraRobustApp:
     
     def step_process(self):
         """Processamento SIMPLIFICADO"""
-        st.header("🔧 Processamento de Dados")
+        st.header(" Processamento de Dados")
         
         if 'data' not in st.session_state or st.session_state.data is None:
             st.warning("⚠️ Nenhum dataset carregado.")
@@ -2080,12 +2080,12 @@ class UltraRobustApp:
                         score = best_metrics.get('accuracy', best_metrics.get('f1', 0))
                     else:
                         score = best_metrics.get('r2', best_metrics.get('explained_variance', 0))
-                    st.metric("🎯 Score", f"{score:.4f}")
+                    st.metric("Score", f"{score:.4f}")
                 with col3:
-                    st.metric("🤖 Modelos Treinados", len(results))
+                    st.metric("Modelos Treinados", len(results))
             
             # Ranking
-            with st.expander("🏆 Ranking Completo"):
+            with st.expander("Ranking Completo"):
                 ranking_df = trainer.get_ranking()
                 st.dataframe(ranking_df, use_container_width=True)
                 
@@ -2143,7 +2143,7 @@ class UltraRobustApp:
             
             with col1:
                 # CSV do ranking
-                if st.button("📊 Exportar CSV", key="export_csv_results_btn"):
+                if st.button(" Exportar CSV", key="export_csv_results_btn"):
                     try:
                         ranking_df = trainer.get_ranking()
                         csv_data = ranking_df.to_csv(index=False).encode('utf-8')
