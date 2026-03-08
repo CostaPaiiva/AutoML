@@ -477,14 +477,21 @@ class AdvancedModelTrainer:
 
         # Se for regressão
         else:
+            # Calcula o erro quadrático médio (MSE) entre os valores verdadeiros e as previsões
             metrics['mse'] = mean_squared_error(y_true, y_pred)
+            # Calcula a raiz do erro quadrático médio (RMSE)
             metrics['rmse'] = np.sqrt(metrics['mse'])
+            # Calcula o erro absoluto médio (MAE) entre os valores verdadeiros e as previsões
             metrics['mae'] = mean_absolute_error(y_true, y_pred)
+            # Calcula o coeficiente de determinação (R^2)
             metrics['r2'] = r2_score(y_true, y_pred)
 
+            # Garante que os valores verdadeiros sejam positivos para evitar divisão por zero ou valores muito pequenos
             y_true_safe = np.clip(np.abs(y_true), 1e-10, None)
+            # Calcula o erro percentual absoluto médio (MAPE)
             metrics['mape'] = np.mean(np.abs((y_true - y_pred) / y_true_safe)) * 100
 
+        # Retorna o dicionário de métricas calculadas
         return metrics
 
     # Método para obter a métrica principal para ranking
@@ -499,23 +506,32 @@ class AdvancedModelTrainer:
     def _get_ensemble_weight(self, metrics):
         """Converte desempenho em peso positivo para o ensemble"""
         if self.problem_type == 'classification':
+            # Retorna a pontuação F1 ponderada, garantindo que seja pelo menos um valor pequeno positivo
             return max(metrics.get('f1', 0.0), 1e-6)
         else:
+            # Obtém o RMSE dos resultados, retornando None se não estiver presente
             rmse = metrics.get('rmse', None)
+            # Se RMSE for None ou não positivo, retorna um valor pequeno positivo para evitar divisão por zero
             if rmse is None or rmse <= 0:
                 return 1e-6
+            # Retorna o inverso do RMSE (quanto menor o RMSE, maior o peso)
             return 1.0 / (rmse + 1e-6)
+
 
     # Método para criar o ensemble
     def create_ensemble(self, X_train, y_train, X_test, y_test):
         """Cria ensemble dos melhores modelos"""
         print("Criando ensemble dos melhores modelos...")
-
-        # Ordena os modelos pelo desempenho
+        
+        # Ordena os modelos pelo desempenho, pegando os 5 melhores
         sorted_models = sorted(
+            # Itera sobre os itens (nome do modelo, métricas) do dicionário de resultados.
             self.results.items(),
+            # Define a chave de ordenação como a métrica principal calculada para cada modelo.
             key=lambda x: self.get_primary_metric(x[1]),
+            # Ordena em ordem decrescente (do melhor para o pior).
             reverse=True
+        # Seleciona os 5 melhores modelos da lista ordenada.
         )[:5]
 
         ensemble_models = []
@@ -529,33 +545,46 @@ class AdvancedModelTrainer:
 
         # Cria o ensemble se houver pelo menos 3 modelos
         if len(ensemble_models) >= 3:
+            # Converte a lista de pesos para um array NumPy de ponto flutuante
             weights = np.array(weights, dtype=float)
 
+            # Verifica se a soma dos pesos é menor ou igual a zero. Se for, inicializa todos os pesos como 1.
             if weights.sum() <= 0:
                 weights = np.ones(len(weights), dtype=float)
 
+            # Normaliza os pesos para que a soma de todos os pesos seja 1
             weights = weights / weights.sum()
 
             try:
                 # Cria VotingClassifier para classificação
                 if self.problem_type == 'classification':
+                    # Lista para armazenar modelos compatíveis com predict_proba
                     compatible_models = []
+                    # Lista para armazenar os pesos dos modelos compatíveis
                     compatible_weights = []
 
+                    # Itera sobre os modelos selecionados para o ensemble e seus pesos
                     for (name, model), weight in zip(ensemble_models, weights):
+                        # Verifica se o modelo possui o método predict_proba (necessário para voting='soft')
                         if hasattr(model, 'predict_proba'):
+                            # Adiciona o modelo e seu peso às listas de modelos compatíveis
                             compatible_models.append((name, model))
                             compatible_weights.append(weight)
 
+                    # Verifica se há pelo menos 3 modelos compatíveis para usar voting='soft'
                     if len(compatible_models) >= 3:
+                        # Converte os pesos dos modelos compatíveis para um array NumPy
                         compatible_weights = np.array(compatible_weights, dtype=float)
+                        # Normaliza os pesos para que a soma seja 1
                         compatible_weights = compatible_weights / compatible_weights.sum()
 
+                        # Cria um VotingClassifier com voting='soft' (baseado em probabilidades)
                         ensemble = VotingClassifier(
                             estimators=compatible_models,
                             voting='soft',
                             weights=compatible_weights.tolist()
                         )
+                    # Caso contrário, usa voting='hard' (baseado em previsões diretas)
                     else:
                         ensemble = VotingClassifier(
                             estimators=ensemble_models,
@@ -578,21 +607,26 @@ class AdvancedModelTrainer:
                 metrics = self.calculate_metrics(y_test, y_pred, y_score=y_score)
 
                 # Calcula pontuações de validação cruzada para o ensemble
+                # Define a estratégia de validação cruzada estratificada para classificação, com 5 folds, embaralhamento e semente aleatória fixa.
                 if self.problem_type == 'classification':
                     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+                # Define a estratégia de validação cruzada K-Fold para regressão, com 5 folds, embaralhamento e semente aleatória fixa.
                 else:
                     cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
+                # Calcula as pontuações da validação cruzada para o modelo de ensemble.
                 cv_scores = cross_val_score(
-                    ensemble,
-                    X_train,
-                    y_train,
-                    cv=cv,
-                    scoring=self.get_scoring_metric(),
-                    n_jobs=-1
+                    ensemble, # O modelo de ensemble a ser avaliado.
+                    X_train, # Os dados de treinamento.
+                    y_train, # Os rótulos de treinamento.
+                    cv=cv, # A estratégia de validação cruzada a ser usada.
+                    scoring=self.get_scoring_metric(), # A métrica de pontuação a ser usada.
+                    n_jobs=-1 # Usa todos os processadores disponíveis para paralelizar o cálculo.
                 )
 
+                # Armazena a média das pontuações da validação cruzada nas métricas do ensemble.
                 metrics['cv_mean'] = cv_scores.mean()
+                # Armazena o desvio padrão das pontuações da validação cruzada nas métricas do ensemble.
                 metrics['cv_std'] = cv_scores.std()
 
                 # Armazena o ensemble e seus resultados
@@ -609,11 +643,15 @@ class AdvancedModelTrainer:
         """Otimiza os N melhores modelos"""
         print(f"Otimizando os {n_models} melhores modelos...")
 
-        # Obtém os N melhores modelos
+        # Obtém os N melhores modelos com base no desempenho, ordenando-os em ordem decrescente e selecionando os N primeiros.
         sorted_models = sorted(
+            # Itera sobre os itens (nome do modelo, métricas) do dicionário de resultados.
             self.results.items(),
+            # Define a chave de ordenação como a métrica principal calculada para cada modelo.
             key=lambda x: self.get_primary_metric(x[1]),
+            # Ordena em ordem decrescente (do melhor para o pior).
             reverse=True
+        # Seleciona os 'n_models' melhores modelos da lista ordenada.
         )[:n_models]
 
         # Itera sobre os melhores modelos para otimização
@@ -627,22 +665,28 @@ class AdvancedModelTrainer:
                     model_class = type(self.models[name])
 
                     # Cria o modelo otimizado
+                    # Verifica se o modelo é XGBoost e o problema é de classificação
                     if name == 'XGBoost' and self.problem_type == 'classification':
+                        # Cria uma instância do XGBoost Classifier com os melhores parâmetros encontrados pelo Optuna
                         optimized_model = model_class(
-                            **best_params,
-                            random_state=42,
-                            use_label_encoder=False,
-                            eval_metric='logloss'
+                            **best_params, # Desempacota o dicionário de melhores parâmetros
+                            random_state=42, # Define a semente aleatória para reprodutibilidade
+                            use_label_encoder=False, # Desabilita o uso do LabelEncoder
+                            eval_metric='logloss' # Define a métrica de avaliação
                         )
+                    # Verifica se o modelo é XGBoost e o problema é de regressão
                     elif name == 'XGBoost' and self.problem_type == 'regression':
+                        # Cria uma instância do XGBoost Regressor com os melhores parâmetros encontrados pelo Optuna
                         optimized_model = model_class(
-                            **best_params,
-                            random_state=42
+                            **best_params, # Desempacota o dicionário de melhores parâmetros
+                            random_state=42 # Define a semente aleatória para reprodutibilidade
                         )
+                    # Para outros modelos (como RandomForestClassifier/Regressor)
                     else:
+                        # Cria uma instância do modelo com os melhores parâmetros encontrados pelo Optuna
                         optimized_model = model_class(
-                            **best_params,
-                            random_state=42
+                            **best_params, # Desempacota o dicionário de melhores parâmetros
+                            random_state=42 # Define a semente aleatória para reprodutibilidade
                         )
 
                     # Treina o modelo otimizado
@@ -654,22 +698,26 @@ class AdvancedModelTrainer:
                     y_score = self.get_prediction_scores(optimized_model, X_test)
                     metrics = self.calculate_metrics(y_test, y_pred, y_score=y_score)
 
-                    # Calcula pontuações de validação cruzada
+                    # Define a estratégia de validação cruzada estratificada para classificação, com 5 folds, embaralhamento e semente aleatória fixa.
                     if self.problem_type == 'classification':
                         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+                    # Define a estratégia de validação cruzada K-Fold para regressão, com 5 folds, embaralhamento e semente aleatória fixa.
                     else:
                         cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
+                    # Calcula as pontuações da validação cruzada para o modelo otimizado.
                     cv_scores = cross_val_score(
-                        optimized_model,
-                        X_train,
-                        y_train,
-                        cv=cv,
-                        scoring=self.get_scoring_metric(),
-                        n_jobs=-1
+                        optimized_model, # O modelo otimizado a ser avaliado.
+                        X_train, # Os dados de treinamento.
+                        y_train, # Os rótulos de treinamento.
+                        cv=cv, # A estratégia de validação cruzada a ser usada.
+                        scoring=self.get_scoring_metric(), # A métrica de pontuação a ser usada.
+                        n_jobs=-1 # Usa todos os processadores disponíveis para paralelizar o cálculo.
                     )
 
+                    # Armazena a média das pontuações da validação cruzada nas métricas do modelo otimizado.
                     metrics['cv_mean'] = cv_scores.mean()
+                    # Armazena o desvio padrão das pontuações da validação cruzada nas métricas do modelo otimizado.
                     metrics['cv_std'] = cv_scores.std()
 
                     # Armazena o modelo otimizado e seus resultados
@@ -678,12 +726,16 @@ class AdvancedModelTrainer:
 
                     # Armazena a importância das features se disponível
                     if hasattr(optimized_model, 'feature_importances_'):
+                        # Armazena a importância das features do modelo otimizado se disponível
                         self.feature_importance[f'{name}_Optimized'] = optimized_model.feature_importances_
 
+                    # Imprime a métrica principal do modelo otimizado
                     print(f"{name} otimizado: {self.get_primary_metric(metrics)}")
 
+                # Captura e imprime qualquer exceção que ocorra durante a otimização
                 except Exception as e:
                     print(f"Erro ao otimizar {name}: {str(e)}")
+
 
     # Método para determinar o melhor modelo
     def determine_best_model(self):
@@ -699,19 +751,23 @@ class AdvancedModelTrainer:
 
         # Atualiza os atributos best_model_name e best_model
         self.best_model_name = best_model_name
+        # Obtém o melhor modelo do dicionário de modelos treinados usando o nome do melhor modelo
         self.best_model = self.models.get(best_model_name)
 
+        # Imprime o nome do melhor modelo encontrado
         print(f"\n MELHOR MODELO: {best_model_name}")
+        # Imprime a métrica principal do melhor modelo, formatada com 4 casas decimais
         print(f"Métrica principal: {self.get_primary_metric(self.results[best_model_name]):.4f}")
+
 
     # Método para obter os modelos ranqueados
     def get_ranked_models(self):
         """Retorna modelos ordenados do melhor para o pior"""
-        # Ordena os resultados pelo desempenho
+        # Ordena os resultados pelo desempenho, usando a métrica principal e em ordem decrescente
         ranked = sorted(
-            self.results.items(),
-            key=lambda x: self.get_primary_metric(x[1]),
-            reverse=True
+            self.results.items(), # Obtém os itens (nome do modelo, métricas) do dicionário de resultados
+            key=lambda x: self.get_primary_metric(x[1]), # Define a chave de ordenação como a métrica principal calculada para cada modelo
+            reverse=True # Ordena em ordem decrescente (do melhor para o pior)
         )
 
         # Cria um DataFrame com o ranking dos modelos
@@ -735,11 +791,15 @@ class AdvancedModelTrainer:
 
         # Salva cada modelo treinado
         for name, model in self.models.items():
+            # Salva o modelo usando joblib em um arquivo com extensão .pkl
             joblib.dump(model, f'{path}/{name}.pkl')
+            # Imprime uma mensagem confirmando que o modelo foi salvo e o caminho onde foi salvo
             print(f"Modelo {name} salvo em {path}/{name}.pkl")
 
         # Salva os resultados em um arquivo CSV
         results_df = pd.DataFrame(self.results).T
+        # Salva o DataFrame de resultados em um arquivo CSV
         results_df.to_csv(f'{path}/model_results.csv')
 
+        # Imprime uma mensagem confirmando que os resultados foram salvos
         print(f"Resultados salvos em {path}/model_results.csv")
