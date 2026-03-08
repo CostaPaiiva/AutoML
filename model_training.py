@@ -6,41 +6,66 @@
 # 5. Otimiza hiperparâmetros com Optuna
 # 6. Escolhe o melhor modelo final
 
+# Importa a biblioteca NumPy para operações numéricas
 import numpy as np
+# Importa a biblioteca Pandas para manipulação e análise de dados
 import pandas as pd
+# Importa a biblioteca warnings para controlar avisos
 import warnings
+# Ignora todos os avisos para manter a saída limpa
 warnings.filterwarnings('ignore')
 
+# Importa a biblioteca joblib para serialização de objetos Python (salvar e carregar modelos)
 import joblib
+# Importa a biblioteca Optuna para otimização de hiperparâmetros
 import optuna
+# Importa a biblioteca XGBoost para modelos de gradient boosting
 import xgboost as xgb
+# Importa a biblioteca LightGBM para modelos de gradient boosting
 import lightgbm as lgb
 
+# Importa as classes CatBoostClassifier e CatBoostRegressor da biblioteca CatBoost
 from catboost import CatBoostClassifier, CatBoostRegressor
+# Importa todas as métricas de avaliação do scikit-learn
 from sklearn.metrics import *
+# Importa funções para divisão de dados, validação cruzada e criação de folds do scikit-learn
 from sklearn.model_selection import (
     train_test_split,
     cross_val_score,
     StratifiedKFold,
     KFold
 )
+# Importa a classe LabelEncoder para codificar rótulos categóricos
 from sklearn.preprocessing import LabelEncoder
+# Importa as classes VotingClassifier e VotingRegressor para criar modelos de ensemble
 from sklearn.ensemble import VotingClassifier, VotingRegressor
+# Importa as classes GridSearchCV e RandomizedSearchCV para busca de hiperparâmetros
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 
+# Classe para treinar modelos de Machine Learning de forma avançada
 class AdvancedModelTrainer:
+    # Construtor da classe, inicializa atributos
     def __init__(self, problem_type):
+        # Define o tipo de problema (classificação ou regressão)
         self.problem_type = problem_type
+        # Dicionário para armazenar os modelos treinados
         self.models = {}
+        # Dicionário para armazenar os resultados de avaliação de cada modelo
         self.results = {}
+        # Armazena o melhor modelo encontrado
         self.best_model = None
+        # Armazena o nome do melhor modelo encontrado
         self.best_model_name = ""
+        # Dicionário para armazenar a importância das features de cada modelo
         self.feature_importance = {}
 
+    # Método para obter todos os modelos disponíveis
     def get_all_models(self):
         """Retorna mais de 30 modelos de ML"""
+        # Verifica se o problema é de classificação
         if self.problem_type == 'classification':
+            # Importa modelos de classificação do scikit-learn
             from sklearn.linear_model import LogisticRegression, RidgeClassifier, SGDClassifier
             from sklearn.svm import SVC, NuSVC, LinearSVC
             from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
@@ -56,6 +81,7 @@ class AdvancedModelTrainer:
             )
             from sklearn.neural_network import MLPClassifier
 
+            # Dicionário de modelos de classificação
             models = {
                 'LogisticRegression': LogisticRegression(max_iter=1000, random_state=42),
                 'RidgeClassifier': RidgeClassifier(random_state=42),
@@ -95,10 +121,12 @@ class AdvancedModelTrainer:
                 'LightGBM': lgb.LGBMClassifier(random_state=42, verbose=-1),
                 'CatBoost': CatBoostClassifier(random_state=42, verbose=0),
 
-                'VotingClassifier': None
+                'VotingClassifier': None # Placeholder para ensemble
             }
 
+        # Caso contrário, o problema é de regressão
         else:
+            # Importa modelos de regressão do scikit-learn
             from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, SGDRegressor
             from sklearn.svm import SVR, NuSVR, LinearSVR
             from sklearn.neighbors import KNeighborsRegressor, RadiusNeighborsRegressor
@@ -111,6 +139,7 @@ class AdvancedModelTrainer:
             from sklearn.kernel_ridge import KernelRidge
             from sklearn.neural_network import MLPRegressor
 
+            # Dicionário de modelos de regressão
             models = {
                 'LinearRegression': LinearRegression(),
                 'Ridge': Ridge(random_state=42),
@@ -142,49 +171,71 @@ class AdvancedModelTrainer:
                 'LightGBM': lgb.LGBMRegressor(random_state=42, verbose=-1),
                 'CatBoost': CatBoostRegressor(random_state=42, verbose=0),
 
-                'VotingRegressor': None
+                'VotingRegressor': None # Placeholder para ensemble
             }
 
+        # Retorna o dicionário de modelos
         return models
 
+    # Método para otimizar hiperparâmetros com Optuna
     def optimize_with_optuna(self, model_name, X_train, y_train, n_trials=50):
         """Otimização hiperparâmetros com Optuna"""
         print(f"Otimizando {model_name} com Optuna...")
 
+        # Função objetivo para o Optuna
         def objective(trial):
             model = None
 
+            # Verifica se o problema é de classificação
             if self.problem_type == 'classification':
                 from sklearn.ensemble import RandomForestClassifier
 
+                # Otimização para XGBoost
                 if model_name == 'XGBoost':
+                    # Define os parâmetros a serem otimizados para o XGBoost Classifier
                     param = {
+                        # Sugere um número de estimadores (árvores) entre 50 e 300
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                        # Sugere a profundidade máxima da árvore entre 3 e 10
                         'max_depth': trial.suggest_int('max_depth', 3, 10),
+                        # Sugere a taxa de aprendizado entre 0.01 e 0.3 (escala logarítmica)
                         'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                        # Sugere a fração de amostras a serem usadas para treinar cada árvore (subsample) entre 0.5 e 1.0
                         'subsample': trial.suggest_float('subsample', 0.5, 1.0),
+                        # Sugere a fração de features a serem usadas para treinar cada árvore (colsample_bytree) entre 0.5 e 1.0
                         'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
                     }
+                    # Cria uma instância do XGBoost Classifier com os parâmetros sugeridos pelo Optuna
                     model = xgb.XGBClassifier(
-                        **param,
-                        random_state=42,
-                        use_label_encoder=False,
-                        eval_metric='logloss'
+                        **param, # Desempacota o dicionário de parâmetros
+                        random_state=42, # Define a semente aleatória para reprodutibilidade
+                        use_label_encoder=False, # Desabilita o uso do LabelEncoder (recomendado para versões mais recentes do XGBoost)
+                        eval_metric='logloss' # Define a métrica de avaliação a ser usada durante o treinamento
                     )
 
+                # Otimização para RandomForestClassifier
                 elif model_name == 'RandomForestClassifier':
+                    # Define os parâmetros a serem otimizados para o RandomForestClassifier
                     param = {
+                        # Sugere um número de estimadores (árvores) entre 50 e 300
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                        # Sugere a profundidade máxima da árvore entre 3 e 20
                         'max_depth': trial.suggest_int('max_depth', 3, 20),
+                        # Sugere o número mínimo de amostras para dividir um nó interno entre 2 e 20
                         'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+                        # Sugere o número mínimo de amostras em um nó folha entre 1 e 10
                         'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+                        # Sugere a estratégia para escolher o número de features a serem consideradas ao procurar a melhor divisão
                         'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2', None]),
                     }
+                    # Cria uma instância do RandomForestClassifier com os parâmetros sugeridos pelo Optuna
                     model = RandomForestClassifier(**param, random_state=42)
 
+            # Caso contrário, o problema é de regressão
             else:
                 from sklearn.ensemble import RandomForestRegressor
 
+                # Otimização para XGBoost
                 if model_name == 'XGBoost':
                     param = {
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
@@ -195,6 +246,7 @@ class AdvancedModelTrainer:
                     }
                     model = xgb.XGBRegressor(**param, random_state=42)
 
+                # Otimização para RandomForestRegressor
                 elif model_name == 'RandomForestRegressor':
                     param = {
                         'n_estimators': trial.suggest_int('n_estimators', 50, 300),
@@ -205,14 +257,17 @@ class AdvancedModelTrainer:
                     }
                     model = RandomForestRegressor(**param, random_state=42)
 
+            # Se o modelo não foi definido, retorna infinito negativo
             if model is None:
                 return -np.inf
 
+            # Define a estratégia de validação cruzada
             if self.problem_type == 'classification':
                 cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
             else:
                 cv = KFold(n_splits=3, shuffle=True, random_state=42)
 
+            # Calcula a pontuação média da validação cruzada
             score = cross_val_score(
                 model,
                 X_train,
@@ -221,24 +276,33 @@ class AdvancedModelTrainer:
                 scoring=self.get_scoring_metric(),
                 n_jobs=-1
             )
+            # Retorna a média das pontuações
             return score.mean()
 
+        # Cria um estudo Optuna com direção de maximização
         study = optuna.create_study(direction='maximize')
+        # Otimiza a função objetivo
         study.optimize(objective, n_trials=n_trials)
 
+        # Retorna os melhores hiperparâmetros encontrados
         return study.best_params
 
+    # Método para obter a métrica de avaliação
     def get_scoring_metric(self):
         """Retorna a métrica de avaliação baseada no tipo de problema"""
+        # Se for classificação, retorna 'f1_weighted'
         if self.problem_type == 'classification':
             return 'f1_weighted'
+        # Se for regressão, retorna 'neg_root_mean_squared_error'
         else:
             return 'neg_root_mean_squared_error'
 
+    # Método para treinar todos os modelos
     def train_models(self, X, y, optimize_top_n=5):
         """Treina todos os modelos com validação cruzada"""
         print(f"Iniciando treinamento de modelos ({self.problem_type})...")
 
+        # Divide os dados em treino e teste
         if self.problem_type == 'classification':
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42, stratify=y
@@ -248,18 +312,23 @@ class AdvancedModelTrainer:
                 X, y, test_size=0.2, random_state=42
             )
 
+        # Obtém todos os modelos disponíveis
         all_models = self.get_all_models()
 
+        # Itera sobre todos os modelos
         for name, model in all_models.items():
+            # Verifica se o modelo não é None (placeholder de ensemble)
             if model is not None:
                 try:
                     print(f"Treinando {name}...")
 
+                    # Define a estratégia de validação cruzada
                     if self.problem_type == 'classification':
                         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                     else:
                         cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
+                    # Calcula as pontuações da validação cruzada
                     cv_scores = cross_val_score(
                         model,
                         X_train,
@@ -269,19 +338,26 @@ class AdvancedModelTrainer:
                         n_jobs=-1
                     )
 
+                    # Treina o modelo com os dados de treino
                     model.fit(X_train, y_train)
 
+                    # Faz previsões nos dados de teste
                     y_pred = model.predict(X_test)
 
+                    # Obtém os scores de predição
                     y_score = self.get_prediction_scores(model, X_test)
+                    # Calcula as métricas de avaliação
                     metrics = self.calculate_metrics(y_test, y_pred, y_score=y_score)
 
+                    # Adiciona as métricas de validação cruzada
                     metrics['cv_mean'] = cv_scores.mean()
                     metrics['cv_std'] = cv_scores.std()
 
+                    # Armazena o modelo treinado e seus resultados
                     self.models[name] = model
                     self.results[name] = metrics
 
+                    # Armazena a importância das features se disponível
                     if hasattr(model, 'feature_importances_'):
                         self.feature_importance[name] = model.feature_importances_
 
@@ -290,23 +366,31 @@ class AdvancedModelTrainer:
                 except Exception as e:
                     print(f"Erro ao treinar {name}: {str(e)}")
 
+        # Cria o ensemble dos melhores modelos
         self.create_ensemble(X_train, y_train, X_test, y_test)
 
+        # Otimiza os N melhores modelos se optimize_top_n > 0
         if optimize_top_n > 0:
             self.optimize_top_models(optimize_top_n, X_train, y_train, X_test, y_test)
 
+        # Determina o melhor modelo
         self.determine_best_model()
 
+        # Retorna os resultados e o nome do melhor modelo
         return self.results, self.best_model_name
 
+    # Método para obter scores de predição (probabilidades)
     def get_prediction_scores(self, model, X):
         """Obtém scores/probabilidades para métricas como ROC AUC"""
+        # Retorna None se não for classificação
         if self.problem_type != 'classification':
             return None
 
         try:
+            # Tenta obter probabilidades de predição
             if hasattr(model, 'predict_proba'):
                 return model.predict_proba(X)
+            # Tenta obter a função de decisão
             elif hasattr(model, 'decision_function'):
                 return model.decision_function(X)
             else:
@@ -314,10 +398,12 @@ class AdvancedModelTrainer:
         except Exception:
             return None
 
+    # Método para calcular métricas de avaliação
     def calculate_metrics(self, y_true, y_pred, y_score=None):
         """Calcula todas as métricas relevantes"""
         metrics = {}
 
+        # Se for classificação
         if self.problem_type == 'classification':
             metrics['accuracy'] = accuracy_score(y_true, y_pred)
             metrics['precision'] = precision_score(y_true, y_pred, average='weighted', zero_division=0)
@@ -355,6 +441,7 @@ class AdvancedModelTrainer:
             cm = confusion_matrix(y_true, y_pred)
             metrics['confusion_matrix'] = cm
 
+        # Se for regressão
         else:
             metrics['mse'] = mean_squared_error(y_true, y_pred)
             metrics['rmse'] = np.sqrt(metrics['mse'])
@@ -366,6 +453,7 @@ class AdvancedModelTrainer:
 
         return metrics
 
+    # Método para obter a métrica principal para ranking
     def get_primary_metric(self, metrics):
         """Retorna a métrica principal para ranking"""
         if self.problem_type == 'classification':
@@ -373,6 +461,7 @@ class AdvancedModelTrainer:
         else:
             return -metrics['rmse']
 
+    # Método para obter o peso do ensemble
     def _get_ensemble_weight(self, metrics):
         """Converte desempenho em peso positivo para o ensemble"""
         if self.problem_type == 'classification':
@@ -383,10 +472,12 @@ class AdvancedModelTrainer:
                 return 1e-6
             return 1.0 / (rmse + 1e-6)
 
+    # Método para criar o ensemble
     def create_ensemble(self, X_train, y_train, X_test, y_test):
         """Cria ensemble dos melhores modelos"""
         print("Criando ensemble dos melhores modelos...")
 
+        # Ordena os modelos pelo desempenho
         sorted_models = sorted(
             self.results.items(),
             key=lambda x: self.get_primary_metric(x[1]),
@@ -396,11 +487,13 @@ class AdvancedModelTrainer:
         ensemble_models = []
         weights = []
 
+        # Seleciona os melhores modelos e seus pesos
         for name, metrics in sorted_models:
             if name in self.models:
                 ensemble_models.append((name, self.models[name]))
                 weights.append(self._get_ensemble_weight(metrics))
 
+        # Cria o ensemble se houver pelo menos 3 modelos
         if len(ensemble_models) >= 3:
             weights = np.array(weights, dtype=float)
 
@@ -410,6 +503,7 @@ class AdvancedModelTrainer:
             weights = weights / weights.sum()
 
             try:
+                # Cria VotingClassifier para classificação
                 if self.problem_type == 'classification':
                     compatible_models = []
                     compatible_weights = []
@@ -433,18 +527,23 @@ class AdvancedModelTrainer:
                             estimators=ensemble_models,
                             voting='hard'
                         )
+                # Cria VotingRegressor para regressão
                 else:
                     ensemble = VotingRegressor(
                         estimators=ensemble_models,
                         weights=weights.tolist()
                     )
 
+                # Treina o ensemble
                 ensemble.fit(X_train, y_train)
+                # Faz previsões
                 y_pred = ensemble.predict(X_test)
 
+                # Calcula métricas do ensemble
                 y_score = self.get_prediction_scores(ensemble, X_test)
                 metrics = self.calculate_metrics(y_test, y_pred, y_score=y_score)
 
+                # Calcula pontuações de validação cruzada para o ensemble
                 if self.problem_type == 'classification':
                     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                 else:
@@ -462,6 +561,7 @@ class AdvancedModelTrainer:
                 metrics['cv_mean'] = cv_scores.mean()
                 metrics['cv_std'] = cv_scores.std()
 
+                # Armazena o ensemble e seus resultados
                 self.models['Ensemble'] = ensemble
                 self.results['Ensemble'] = metrics
 
@@ -470,23 +570,29 @@ class AdvancedModelTrainer:
             except Exception as e:
                 print(f"Erro ao criar ensemble: {str(e)}")
 
+    # Método para otimizar os N melhores modelos
     def optimize_top_models(self, n_models, X_train, y_train, X_test, y_test):
         """Otimiza os N melhores modelos"""
         print(f"Otimizando os {n_models} melhores modelos...")
 
+        # Obtém os N melhores modelos
         sorted_models = sorted(
             self.results.items(),
             key=lambda x: self.get_primary_metric(x[1]),
             reverse=True
         )[:n_models]
 
+        # Itera sobre os melhores modelos para otimização
         for name, _ in sorted_models:
+            # Otimiza apenas XGBoost e Random Forest
             if name in ['XGBoost', 'RandomForestClassifier', 'RandomForestRegressor']:
                 try:
+                    # Otimiza hiperparâmetros com Optuna
                     best_params = self.optimize_with_optuna(name, X_train, y_train, n_trials=30)
 
                     model_class = type(self.models[name])
 
+                    # Cria o modelo otimizado
                     if name == 'XGBoost' and self.problem_type == 'classification':
                         optimized_model = model_class(
                             **best_params,
@@ -505,12 +611,16 @@ class AdvancedModelTrainer:
                             random_state=42
                         )
 
+                    # Treina o modelo otimizado
                     optimized_model.fit(X_train, y_train)
+                    # Faz previsões
                     y_pred = optimized_model.predict(X_test)
 
+                    # Calcula métricas do modelo otimizado
                     y_score = self.get_prediction_scores(optimized_model, X_test)
                     metrics = self.calculate_metrics(y_test, y_pred, y_score=y_score)
 
+                    # Calcula pontuações de validação cruzada
                     if self.problem_type == 'classification':
                         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                     else:
@@ -528,9 +638,11 @@ class AdvancedModelTrainer:
                     metrics['cv_mean'] = cv_scores.mean()
                     metrics['cv_std'] = cv_scores.std()
 
+                    # Armazena o modelo otimizado e seus resultados
                     self.models[f'{name}_Optimized'] = optimized_model
                     self.results[f'{name}_Optimized'] = metrics
 
+                    # Armazena a importância das features se disponível
                     if hasattr(optimized_model, 'feature_importances_'):
                         self.feature_importance[f'{name}_Optimized'] = optimized_model.feature_importances_
 
@@ -539,30 +651,36 @@ class AdvancedModelTrainer:
                 except Exception as e:
                     print(f"Erro ao otimizar {name}: {str(e)}")
 
+    # Método para determinar o melhor modelo
     def determine_best_model(self):
         """Determina o melhor modelo baseado nas métricas"""
         if not self.results:
             return
 
+        # Encontra o nome do melhor modelo
         best_model_name = max(
             self.results.items(),
             key=lambda x: self.get_primary_metric(x[1])
         )[0]
 
+        # Atualiza os atributos best_model_name e best_model
         self.best_model_name = best_model_name
         self.best_model = self.models.get(best_model_name)
 
         print(f"\n MELHOR MODELO: {best_model_name}")
         print(f"Métrica principal: {self.get_primary_metric(self.results[best_model_name]):.4f}")
 
+    # Método para obter os modelos ranqueados
     def get_ranked_models(self):
         """Retorna modelos ordenados do melhor para o pior"""
+        # Ordena os resultados pelo desempenho
         ranked = sorted(
             self.results.items(),
             key=lambda x: self.get_primary_metric(x[1]),
             reverse=True
         )
 
+        # Cria um DataFrame com o ranking dos modelos
         ranking_df = pd.DataFrame([
             {
                 'Modelo': name,
@@ -574,15 +692,19 @@ class AdvancedModelTrainer:
 
         return ranking_df
 
+    # Método para salvar os modelos treinados
     def save_models(self, path='models/'):
         """Salva todos os modelos treinados"""
         import os
+        # Cria o diretório de modelos se não existir
         os.makedirs(path, exist_ok=True)
 
+        # Salva cada modelo treinado
         for name, model in self.models.items():
             joblib.dump(model, f'{path}/{name}.pkl')
             print(f"Modelo {name} salvo em {path}/{name}.pkl")
 
+        # Salva os resultados em um arquivo CSV
         results_df = pd.DataFrame(self.results).T
         results_df.to_csv(f'{path}/model_results.csv')
 
