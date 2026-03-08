@@ -199,28 +199,30 @@ class PDFReportGenerator:
                     # Adiciona a célula do score ao PDF, com borda e quebra de linha
                     pdf.cell(45, 10, score, border=1, ln=True)
 
-                pdf.ln(10)
+                pdf.ln(10)  # Adiciona uma quebra de linha com espaçamento ao PDF para separação visual.
 
-                if len(results) > 0:
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(0, 10, "METRICAS DETALHADAS", ln=True)
-                    pdf.set_font("Arial", '', 10)
+                if len(results) > 0:  # Verifica se há resultados de modelos para exibir.
+                    pdf.set_font("Arial", 'B', 12)  # Define a fonte para o subtítulo "METRICAS DETALHADAS".
+                    pdf.cell(0, 10, "METRICAS DETALHADAS", ln=True)  # Adiciona o subtítulo "METRICAS DETALHADAS" ao PDF, com quebra de linha.
+                    pdf.set_font("Arial", '', 10)  # Define a fonte para as informações das métricas (Arial, normal, tamanho 10).
 
-                    for model_name, metrics in results.items():
-                        pdf.set_font("Arial", 'B', 10)
-                        pdf.cell(0, 10, f"Modelo: {model_name}", ln=True)
-                        pdf.set_font("Arial", '', 9)
+                    for model_name, metrics in results.items():  # Itera sobre cada modelo e suas métricas no dicionário 'results'.
+                        pdf.set_font("Arial", 'B', 10)  # Define a fonte para o nome do modelo (Arial, negrito, tamanho 10).
+                        pdf.cell(0, 10, f"Modelo: {model_name}", ln=True)  # Adiciona o nome do modelo ao PDF.
+                        pdf.set_font("Arial", '', 9)  # Define a fonte para as métricas individuais (Arial, normal, tamanho 9).
 
-                        for metric_name, value in metrics.items():
+                        for metric_name, value in metrics.items():  # Itera sobre cada métrica e seu valor para o modelo atual.
+                            # Verifica se o valor da métrica é um tipo numérico (int, float, numpy float ou int).
                             if isinstance(value, (int, float, np.floating, np.integer)):
+                                # Adiciona a métrica e seu valor formatado ao PDF, com quebra de linha.
                                 pdf.cell(0, 8, f"  {metric_name}: {float(value):.4f}", ln=True)
-                        pdf.ln(5)
+                        pdf.ln(5)  # Adiciona uma quebra de linha com espaçamento após as métricas de cada modelo.
 
-                    pdf.ln(10)
+                    pdf.ln(10)  # Adiciona uma quebra de linha com espaçamento após a seção de métricas detalhadas.
 
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "RECOMENDACOES", ln=True)
-                pdf.set_font("Arial", '', 10)
+                pdf.set_font("Arial", 'B', 12)  # Define a fonte para o subtítulo "RECOMENDACOES".
+                pdf.cell(0, 10, "RECOMENDACOES", ln=True)  # Adiciona o subtítulo "RECOMENDACOES" ao PDF, com quebra de linha.
+                pdf.set_font("Arial", '', 10)  # Define a fonte para as recomendações (Arial, normal, tamanho 10).
 
                 recommendations = [
                     "1. Implemente o melhor modelo em producao",
@@ -230,93 +232,135 @@ class PDFReportGenerator:
                     "5. Valide com testes A/B antes de deploy"
                 ]
 
-                for rec in recommendations:
-                    pdf.cell(0, 8, rec, ln=True)
+                for rec in recommendations:  # Itera sobre cada recomendação na lista 'recommendations'.
+                    pdf.cell(0, 8, rec, ln=True)  # Adiciona a recomendação como uma célula de texto ao PDF, com quebra de linha.
 
-                os.makedirs('reports', exist_ok=True)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f'reports/relatorio_automl_{timestamp}.pdf'
+                os.makedirs('reports', exist_ok=True)  # Cria o diretório 'reports' se ele não existir.
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')  # Gera um timestamp para usar no nome do arquivo.
+                filename = f'reports/relatorio_automl_{timestamp}.pdf'  # Define o nome do arquivo PDF.
 
                 try:
-                    pdf.output(filename)
-                    if os.path.exists(filename):
-                        return filename
-                    else:
-                        st.error("PDF não foi criado")
-                        return None
-                except Exception as e:
-                    st.error(f"Erro ao salvar PDF: {str(e)}")
-                    return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+                    pdf.output(filename)  # Salva o documento PDF no arquivo especificado.
+                    if os.path.exists(filename):  # Verifica se o arquivo PDF foi criado com sucesso.
+                        return filename  # Retorna o nome do arquivo se ele existir.
+                    else:  # Se o arquivo não foi criado.
+                        st.error("PDF não foi criado")  # Exibe uma mensagem de erro no Streamlit.
+                        return None  # Retorna None indicando falha.
+                except Exception as e:  # Captura exceções que ocorrem ao salvar o PDF.
+                    st.error(f"Erro ao salvar PDF: {str(e)}")  # Exibe a mensagem de erro no Streamlit.
+                    return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)  # Tenta gerar um relatório TXT como fallback.
 
-            except ImportError:
-                st.warning("fpdf2 não encontrado. Gerando relatório TXT...")
-                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
-            except Exception as e:
-                st.error(f"Erro no fpdf: {str(e)}")
-                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+            except ImportError:  # Captura o erro se a biblioteca fpdf não estiver instalada.
+                st.warning("fpdf2 não encontrado. Gerando relatório TXT...")  # Alerta que fpdf não foi encontrado e que um TXT será gerado.
+                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)  # Gera um relatório TXT como fallback.
+            except Exception as e:  # Captura outras exceções relacionadas ao uso do fpdf.
+                st.error(f"Erro no fpdf: {str(e)}")  # Exibe a mensagem de erro no Streamlit.
+                return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)  # Gera um relatório TXT como fallback.
 
-        except Exception as e:
-            st.error(f"Erro ao gerar relatório: {str(e)}")
-            return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)
+        except Exception as e:  # Captura exceções gerais que ocorrem na função generate_report.
+            st.error(f"Erro ao gerar relatório: {str(e)}")  # Exibe a mensagem de erro no Streamlit.
+            return PDFReportGenerator.generate_txt_report(results, trainer, problem_type, data_info)  # Gera um relatório TXT como fallback.
 
     @staticmethod
     def generate_txt_report(results, trainer, problem_type, data_info=None):
         """Gera relatório em texto (fallback)"""
         try:
+            # Cria o diretório 'reports' se ele não existir, para salvar o relatório.
             os.makedirs('reports', exist_ok=True)
 
+            # Gera um timestamp no formato 'YYYYMMDD_HHMMSS' para o nome do arquivo.
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            # Define o nome completo do arquivo TXT, incluindo o caminho do diretório e o timestamp.
             filename = f'reports/relatorio_automl_{timestamp}.txt'
 
+            # Abre o arquivo TXT no modo de escrita ('w') com codificação UTF-8.
             with open(filename, 'w', encoding='utf-8') as f:
+                # Escreve uma linha de separação no arquivo.
                 f.write("=" * 60 + "\n")
+                # Escreve o título principal do relatório no arquivo.
                 f.write("RELATORIO AUTOML PRO - TODOS OS MODELOS\n")
+                # Escreve outra linha de separação.
                 f.write("=" * 60 + "\n\n")
 
+                # Escreve a data e hora de geração do relatório.
                 f.write(f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
+                # Escreve o tipo de problema (classificação ou regressão).
                 f.write(f"Tipo de problema: {problem_type.upper()}\n")
+                # Escreve o número total de modelos treinados.
                 f.write(f"Total de modelos: {len(results)}\n")
 
+                # Verifica se há informações do dataset para incluir.
                 if data_info:
+                    # Escreve o número de amostras do dataset.
                     f.write(f"Amostras: {data_info.get('n_samples', 'N/A')}\n")
+                    # Escreve o número de features do dataset.
                     f.write(f"Features: {data_info.get('n_features', 'N/A')}\n")
 
+                # Escreve uma quebra de linha e uma linha de separação para a seção "MELHOR MODELO".
                 f.write("\n" + "=" * 60 + "\n")
+                # Escreve o título da seção "MELHOR MODELO".
                 f.write("MELHOR MODELO\n")
+                # Escreve outra linha de separação.
                 f.write("=" * 60 + "\n\n")
 
+                # Obtém o nome do melhor modelo do objeto 'trainer'.
                 best_name = trainer.best_model_name
+                # Verifica se um melhor modelo foi identificado e está nos resultados.
                 if best_name and best_name in results:
+                    # Escreve o nome do melhor modelo.
                     f.write(f"Modelo: {best_name}\n")
+                    # Obtém as métricas do melhor modelo.
                     best_metrics = results[best_name]
 
+                    # Itera sobre cada métrica e seu valor para o melhor modelo.
                     for metric, value in best_metrics.items():
+                        # Verifica se o valor da métrica é numérico.
                         if isinstance(value, (int, float, np.floating, np.integer)):
+                            # Escreve o nome da métrica e seu valor formatado com 4 casas decimais.
                             f.write(f"{metric}: {float(value):.4f}\n")
 
+                # Adiciona uma quebra de linha e uma linha de separação para a seção "RANKING COMPLETO".
                 f.write("\n" + "=" * 60 + "\n")
+                # Escreve o título da seção "RANKING COMPLETO".
                 f.write("RANKING COMPLETO\n")
+                # Escreve outra linha de separação.
                 f.write("=" * 60 + "\n\n")
 
+                # Obtém o DataFrame de ranking de modelos do objeto 'trainer'.
                 ranking_df = trainer.get_ranking()
+                # Itera sobre cada linha do DataFrame de ranking.
                 for _, row in ranking_df.iterrows():
+                    # Escreve a posição, nome do modelo e score formatado no arquivo.
                     f.write(f"{row['Posição']}. {row['Modelo']} - Score: {float(row['Score']):.4f}\n")
 
+                # Adiciona uma quebra de linha e uma linha de separação para a seção "METRICAS POR MODELO".
                 f.write("\n" + "=" * 60 + "\n")
+                # Escreve o título da seção "METRICAS POR MODELO".
                 f.write("METRICAS POR MODELO\n")
+                # Escreve outra linha de separação.
                 f.write("=" * 60 + "\n\n")
 
+                # Itera sobre cada modelo e suas métricas no dicionário 'results'.
                 for model_name, metrics in results.items():
+                    # Escreve o nome do modelo no arquivo.
                     f.write(f"{model_name}:\n")
+                    # Itera sobre cada métrica e seu valor para o modelo atual.
                     for metric, value in metrics.items():
+                        # Verifica se o valor da métrica é um tipo numérico.
                         if isinstance(value, (int, float, np.floating, np.integer)):
+                            # Escreve a métrica e seu valor formatado com 4 casas decimais.
                             f.write(f"  {metric}: {float(value):.4f}\n")
+                    # Adiciona uma quebra de linha após as métricas de cada modelo para separação.
                     f.write("\n")
 
+                # Escreve uma linha de separação para a seção "RECOMENDACOES".
                 f.write("=" * 60 + "\n")
+                # Escreve o título da seção "RECOMENDACOES".
                 f.write("RECOMENDACOES\n")
+                # Escreve outra linha de separação.
                 f.write("=" * 60 + "\n\n")
 
+                # Lista de recomendações a serem incluídas no relatório.
                 recs = [
                     "• Use o melhor modelo em producao",
                     "• Monitore performance",
@@ -324,25 +368,31 @@ class PDFReportGenerator:
                     "• Valide com novos dados"
                 ]
 
-                for rec in recs:
-                    f.write(f"{rec}\n")
+                for rec in recs:  # Itera sobre cada recomendação na lista 'recs'.
+                    f.write(f"{rec}\n")  # Escreve a recomendação no arquivo TXT, seguida de uma quebra de linha.
 
-            return filename
+            return filename  # Retorna o nome do arquivo TXT gerado.
 
-        except Exception as e:
-            st.error(f"Erro ao gerar TXT: {str(e)}")
-            return None
+        except Exception as e:  # Captura qualquer exceção que ocorra durante a geração do relatório TXT.
+            st.error(f"Erro ao gerar TXT: {str(e)}")  # Exibe uma mensagem de erro no Streamlit com os detalhes da exceção.
+            return None  # Retorna None indicando que o relatório TXT não pôde ser gerado.
 
 # ========== PROCESSAMENTO DE DADOS ==========
 class PowerfulDataProcessor:
     """Processador de dados avançado com feature engineering e detecção automática"""
 
     def __init__(self):
+        # Inicializa o scaler para normalização de dados numéricos (e.g., StandardScaler)
         self.scaler = None
+        # Dicionário para armazenar encoders para colunas categóricas, se necessário
         self.encoders = {}
+        # Inicializa o imputer para tratamento de valores ausentes, se necessário
         self.imputer = None
+        # Lista para armazenar os nomes ou índices das features selecionadas
         self.selected_features = []
+        # Nome da coluna target, será definido durante o processamento
         self.target_col = None
+        # Tipo de problema (classificação ou regressão), será detectado ou definido
         self.problem_type = None
 
     def process(self, data=None, target_col=None, X=None, y=None, problem_type=None, auto_detect=True):
