@@ -1645,7 +1645,7 @@ class TargetDetector:
             # Verifica se há pontuações de colunas disponíveis.
             if len(sorted_scores) > 0:
             # Obtém o nome da coluna com a maior pontuação.
-            top_col = sorted_scores[0][0]
+                top_col = sorted_scores[0][0]
             try:
                 # Tenta criar e exibir um histograma da distribuição da coluna principal.
                 fig = px.histogram(data, x=top_col, title=f"Distribuição: {top_col}")
@@ -1770,142 +1770,206 @@ class TargetDetector:
     def detect_problem_type(y):
         """Detecta se é classificação ou regressão de forma robusta"""
         try:
+            # Tenta converter a série 'y' para numérica, substituindo valores não numéricos por NaN.
             y_numeric = pd.to_numeric(y, errors='coerce')
+            # Conta o número de valores não nulos na série numérica.
             not_na = y_numeric.notna().sum()
 
+            # Se a proporção de valores não nulos for menor que 80%, assume classificação (dados muito bagunçados).
             if not_na / len(y) < 0.8:
                 return 'classification'
 
+            # Remove os valores nulos da série numérica para análise.
             y_clean = y_numeric.dropna()
+            # Se a série limpa estiver vazia após remover NaNs, assume classificação.
             if len(y_clean) == 0:
                 return 'classification'
 
+            # Obtém o número de valores únicos na série limpa.
             unique_vals = len(y_clean.unique())
 
+            # Se o número de valores únicos for menor ou igual a 5.
             if unique_vals <= 5:
                 try:
+                    # Verifica se todos os valores podem ser convertidos para inteiros sem perda de informação.
                     if all(y_clean.astype(int) == y_clean):
-                        return 'classification'
+                        return 'classification' # Se sim, e com poucos valores únicos, é provável que seja classificação.
                     else:
-                        return 'regression'
+                        return 'regression' # Se não, e mesmo com poucos valores únicos (float), pode ser regressão.
                 except Exception:
-                    return 'classification'
+                    return 'classification' # Em caso de erro na conversão para int, assume classificação como fallback.
 
+            # Se o número de valores únicos estiver entre 6 e 20.
             elif unique_vals <= 20:
+                # Calcula a contagem de frequência normalizada de cada valor.
                 value_counts = y_clean.value_counts(normalize=True)
+                # Se algum valor único representa mais de 25% dos dados.
                 if (value_counts > 0.25).any():
                     try:
+                        # Verifica se todos os valores podem ser convertidos para inteiros sem perda de informação.
                         if all(y_clean.astype(int) == y_clean):
-                            return 'classification'
+                            return 'classification' # Sugere classificação.
                         else:
-                            return 'regression'
+                            return 'regression' # Sugere regressão.
                     except Exception:
-                        return 'classification'
+                        return 'classification' # Em caso de erro, sugere classificação.
                 else:
-                    return 'regression'
+                    return 'regression' # Caso contrário, sugere regressão.
+            # Se o número de valores únicos for maior que 20, é provável que seja regressão.
             else:
                 return 'regression'
 
         except Exception:
             try:
+                # Se 'y' tiver um atributo 'dtype' (é uma série ou DataFrame).
                 if hasattr(y, 'dtype'):
+                    # Se o tipo de dado for 'object' (string) ou tiver poucos valores únicos (<= 10).
                     if y.dtype == 'object' or len(y.unique()) <= 10:
-                        return 'classification'
+                        return 'classification' # Retorna classificação.
                     else:
-                        return 'regression'
+                        return 'regression' # Caso contrário, retorna regressão.
                 else:
+                    # Se não for uma série/DataFrame, tenta obter o número de valores únicos de um array NumPy.
                     unique_vals = len(np.unique(y))
+                    # Se tiver poucos valores únicos (<= 10).
                     if unique_vals <= 10:
-                        return 'classification'
+                        return 'classification' # Retorna classificação.
                     else:
-                        return 'regression'
+                        return 'regression' # Caso contrário, retorna regressão.
             except Exception:
-                return 'regression'
+                return 'regression' # Como fallback final, retorna regressão se tudo falhar.
 
 # ========== APLICAÇÃO PRINCIPAL COM FIXES ==========
 class UltraRobustApp:
+    # Construtor da classe UltraRobustApp.
     def __init__(self):
+        # Verifica se 'app_initialized' não está no st.session_state (primeira execução).
         if 'app_initialized' not in st.session_state:
+            # Inicializa a flag 'app_initialized' como True.
             st.session_state.app_initialized = True
+            # Define a etapa inicial da aplicação como 1 (Upload).
             st.session_state.step = 1
+            # Inicializa 'data' como None.
             st.session_state.data = None
+            # Inicializa 'processed' como False.
             st.session_state.processed = False
+            # Define o tipo de processador de dados a ser usado.
             st.session_state.processor_type = "POWERFULL"
+            # Define o tipo de treinador de modelos a ser usado.
             st.session_state.trainer_type = "ULTRA_COMPLETE"
+            # Registra o tempo da última execução para controle de reruns.
             st.session_state.last_rerun = time.time()
+            # Define o número padrão de folds para validação cruzada.
             st.session_state.n_folds = 5
+            # Define a estratégia padrão de validação cruzada.
             st.session_state.cv_strategy = "Auto (Recomendado)"
+            # Define o estado aleatório padrão para reprodutibilidade.
             st.session_state.random_state = 42
+            # Habilita o treinamento paralelo por padrão.
             st.session_state.parallel = True
 
+    # Método para executar um rerun seguro da aplicação.
     def safe_rerun(self, delay=0.1):
         """Rerun seguro com delay"""
+        # Obtém o tempo atual.
         current_time = time.time()
+        # Verifica se o tempo desde o último rerun é maior que 0.5 segundos.
         if current_time - st.session_state.last_rerun > 0.5:
+            # Espera um pequeno atraso.
             time.sleep(delay)
+            # Atualiza o tempo do último rerun.
             st.session_state.last_rerun = current_time
             try:
+                # Tenta executar st.rerun().
                 st.rerun()
             except Exception:
+                # Em caso de erro, tenta novamente.
                 st.rerun()
         else:
+            # Se o rerun for muito rápido, espera 0.5 segundos e tenta novamente.
             time.sleep(0.5)
             st.rerun()
+
 
     def run(self):
         """Executa a aplicação com tratamento de erros"""
         try:
+            # Define o título principal da aplicação Streamlit.
             st.title("🤖 AutoML")
+            # Exibe um markdown com um selo de "Validação Cruzada Ativada" e uma breve descrição.
             st.markdown("""
             <div class='cv-badge'>✅ VALIDAÇÃO CRUZADA ATIVADA</div>
             Sistema profissional com **validação cruzada** e **30+ modelos**!
             """, unsafe_allow_html=True)
 
+            # Chama o método para exibir a barra de progresso das etapas.
             self.show_progress()
 
             try:
+                # Verifica qual é a etapa atual do fluxo da aplicação.
                 if st.session_state.step == 1:
+                    # Se for a etapa 1, chama o método para upload do dataset.
                     self.step_upload()
                 elif st.session_state.step == 2:
+                    # Se for a etapa 2, chama o método para processamento dos dados.
                     self.step_process()
                 elif st.session_state.step == 3:
+                    # Se for a etapa 3, chama o método para treinamento dos modelos.
                     self.step_train()
                 elif st.session_state.step == 4:
+                    # Se for a etapa 4, chama o método para exibir os resultados.
                     self.step_results()
             except Exception as e:
+                # Captura e exibe um erro específico da etapa atual.
                 st.error(f"❌ Erro na etapa {st.session_state.step}: {str(e)}")
+                # Oferece um botão para reiniciar a aplicação em caso de erro na etapa.
                 if st.button("🔄 Reiniciar Aplicação", key="restart_app_error"):
+                    # Chama o método para reiniciar a aplicação.
                     self.reset_app()
 
         except Exception as e:
+            # Captura e exibe um erro crítico que possa ocorrer na execução geral da aplicação.
             st.error(f"❌ Erro crítico: {str(e)}")
+            # Informa ao usuário para recarregar a página.
             st.info("Recarregue a página para tentar novamente.")
 
     def show_progress(self):
         """Barra de progresso simples"""
+        # Define os nomes das etapas da aplicação.
         steps = [" Upload", " Processar", " Treinar", "📊 Resultados"]
+        # Obtém a etapa atual (subtrai 1 para indexação baseada em zero).
         current = st.session_state.step - 1
 
+        # Inicia a string HTML para a barra de progresso.
         html = """
         <div style="display: flex; justify-content: space-between; margin: 20px 0;">
         """
 
+        # Itera sobre cada etapa para construir a representação visual.
         for i, step in enumerate(steps):
+            # Se a etapa já foi concluída, exibe-a em verde.
             if i < current:
                 html += f'<div style="padding: 10px; background: #4CAF50; color: white; border-radius: 5px; text-align: center; flex: 1; margin: 0 5px;">{step} ✅</div>'
+            # Se for a etapa atual, exibe-a em azul.
             elif i == current:
                 html += f'<div style="padding: 10px; background: #2196F3; color: white; border-radius: 5px; text-align: center; flex: 1; margin: 0 5px;">{step}</div>'
+            # Se a etapa ainda não foi alcançada, exibe-a em cinza claro.
             else:
                 html += f'<div style="padding: 10px; background: #f0f0f0; color: #666; border-radius: 5px; text-align: center; flex: 1; margin: 0 5px;">{step}</div>'
 
+        # Fecha a div HTML.
         html += "</div>"
+        # Renderiza o HTML no Streamlit, permitindo tags HTML.
         st.markdown(html, unsafe_allow_html=True)
 
     def step_upload(self):
         """Upload do dataset SIMPLIFICADO para evitar erro do Streamlit"""
+        # Define o cabeçalho para a etapa de upload.
         st.header(" Upload do Dataset")
 
+        # Cria um container para o uploader de arquivo.
         with st.container():
+            # Exibe o widget de upload de arquivo.
             uploaded_file = st.file_uploader(
                 "Escolha um arquivo CSV",
                 type=['csv', 'txt', 'xlsx'],
@@ -1913,64 +1977,195 @@ class UltraRobustApp:
                 key="main_file_uploader"
             )
 
+        # Verifica se um arquivo foi carregado.
         if uploaded_file:
             try:
+                # Verifica a extensão do arquivo para determinar o método de leitura.
                 if uploaded_file.name.endswith('.csv') or uploaded_file.name.endswith('.txt'):
+                    # Lê o arquivo como CSV ou TXT.
                     data = pd.read_csv(uploaded_file)
+                # Se a extensão for .xlsx (Excel).
                 elif uploaded_file.name.endswith('.xlsx'):
+                    # Lê o arquivo como Excel.
                     data = pd.read_excel(uploaded_file)
+                # Como fallback, tenta ler como CSV.
                 else:
                     data = pd.read_csv(uploaded_file)
 
+                # Exibe uma mensagem de sucesso com as dimensões do dataset carregado.
                 st.success(f" Dataset carregado: {data.shape[0]} linhas × {data.shape[1]} colunas")
 
+                # Cria um checkbox para visualizar os dados.
                 if st.checkbox(" Visualizar dados", key="show_preview_upload"):
+                    # Exibe as primeiras 5 linhas do DataFrame em uma tabela.
                     st.dataframe(data.head(), use_container_width=True)
 
+                # Define um subtítulo para a seleção da coluna target.
                 st.subheader(" Seleção do Target")
 
+                # Cria um checkbox para ativar ou desativar a detecção automática.
                 use_auto = st.checkbox(" Usar detecção automática", value=True, key="use_auto_detect")
 
+                # Se a detecção automática estiver ativada.
                 if use_auto:
                     try:
+                        # Chama o detector de target para identificar a coluna target e o tipo de problema.
                         target_col, X, y, confidence, problem_type = TargetDetector.detect_target(data)
 
+                        # Divide o layout em duas colunas para exibir métricas.
                         col1, col2 = st.columns(2)
                         with col1:
+                            # Exibe a coluna target detectada.
                             st.metric(" Target", target_col)
                         with col2:
+                            # Exibe o tipo de problema detectado.
                             st.metric(" Tipo", problem_type.upper())
 
+                        # Armazena as informações do target na sessão do Streamlit.
                         st.session_state.target_col = target_col
+                        # Armazena o DataFrame de features (X) na sessão do Streamlit.
                         st.session_state.X = X
+                        # Armazena a série target (y) na sessão do Streamlit.
                         st.session_state.y = y
+                        # Armazena o tipo de problema detectado na sessão do Streamlit.
                         st.session_state.problem_type = problem_type
+                        # Define a flag 'auto_detected' como True para indicar que a detecção foi automática.
                         st.session_state.auto_detected = True
+                        # Armazena o DataFrame original completo na sessão do Streamlit.
                         st.session_state.data = data
 
+                        # Exibe uma mensagem de sucesso para a detecção automática.
                         st.success("✅ Target detectado automaticamente!")
 
                     except Exception as e:
+                        # Em caso de falha na detecção automática, exibe um erro.
                         st.error(f"❌ Detecção automática falhou: {str(e)}")
+                        # Informa ao usuário para selecionar manualmente.
                         st.info("Por favor, selecione manualmente:")
+                        # Desativa a detecção automática para forçar a seleção manual.
                         use_auto = False
 
+                # Se a detecção automática não for usada ou falhar.
                 if not use_auto or not st.session_state.get('auto_detected', False):
+                    # Obtém a lista de todas as colunas do DataFrame.
                     target_options = data.columns.tolist()
+                    # Define um índice padrão para a seleção manual (última coluna).
                     default_idx = len(target_options) - 1
 
+                    # Itera sobre as colunas para encontrar uma que possa ser um target por palavras-chave.
                     for i, col in enumerate(target_options):
+                        # Converte o nome da coluna para minúsculas.
                         col_lower = col.lower()
+                        # Verifica se o nome da coluna contém palavras-chave comuns de target.
                         if any(kw in col_lower for kw in ['target', 'label', 'class', 'y', 'price', 'value']):
+                            # Se encontrar, define este índice como padrão.
                             default_idx = i
                             break
 
+                    # Exibe um selectbox (caixa de seleção) no Streamlit para permitir que o usuário escolha a coluna target.
                     target_col = st.selectbox(
+                        # Título do selectbox, instruindo o usuário a selecionar a coluna target.
                         "Selecione a coluna target:",
+                        # As opções disponíveis no selectbox são a lista de todas as colunas do DataFrame.
                         target_options,
+                        # Define qual opção será pré-selecionada por padrão, com base no 'default_idx' calculado.
                         index=default_idx,
+                        # Atribui uma chave única ao widget para garantir seu funcionamento correto no Streamlit.
                         key="manual_target_selector_upload"
                     )
+
+                    # Separa as features (X) removendo a coluna target selecionada.
+                    X = data.drop(columns=[target_col]).copy()
+                    # Separa o target (y) pegando a coluna target selecionada.
+                    y = data[target_col].copy()
+
+                    try:
+                        # Tenta detectar o tipo de problema (classificação/regressão) da coluna target.
+                        problem_type = TargetDetector.detect_problem_type(y)
+                    except Exception:
+                        # Se a detecção robusta falhar, usa um fallback simples.
+                        if y.dtype == 'object' or len(y.unique()) <= 10:
+                            # Se for tipo 'object' ou tiver poucas classes, assume classificação.
+                            problem_type = 'classification'
+                        else:
+                            # Caso contrário, assume regressão.
+                            problem_type = 'regression'
+
+                    # Armazena as informações do target na sessão do Streamlit.
+                    # Armazena o nome da coluna target selecionada pelo usuário na sessão do Streamlit.
+                    st.session_state.target_col = target_col
+                    # Armazena o DataFrame de features (X) resultante da separação na sessão do Streamlit.
+                    st.session_state.X = X
+                    # Armazena a série target (y) resultante da separação na sessão do Streamlit.
+                    st.session_state.y = y
+                    # Armazena o tipo de problema (classificação ou regressão) detectado para a coluna target na sessão do Streamlit.
+                    st.session_state.problem_type = problem_type
+                    # Define a flag 'auto_detected' como False na sessão do Streamlit, indicando que a seleção da coluna target foi manual.
+                    st.session_state.auto_detected = False # Indica que a seleção foi manual.
+                    # Armazena o DataFrame original completo (com a coluna target antes da separação) na sessão do Streamlit.
+                    st.session_state.data = data
+
+                    # Exibe mensagens de sucesso com a coluna target selecionada e o tipo de problema.
+                    st.success(f"✅ Target selecionado: {target_col}")
+                    st.success(f" Tipo: {problem_type.upper()}")
+
+                # Adiciona uma linha divisória para separação visual.
+                st.markdown("---")
+
+                # Divide o layout em duas colunas para botões de navegação.
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Botão para iniciar um novo upload, limpando o estado da sessão.
+                    if st.button("🔄 Novo Upload", type="secondary", key="new_upload_simple_btn"):
+                        # Define as chaves do st.session_state a serem preservadas.
+                        keys_to_keep = ['app_initialized', 'last_rerun', 'n_folds', 'cv_strategy', 'random_state', 'parallel']
+                        # Identifica as chaves a serem removidas.
+                        keys_to_remove = [k for k in st.session_state.keys() if k not in keys_to_keep]
+                        # Remove as chaves identificadas.
+                        for key in keys_to_remove:
+                            del st.session_state[key]
+                        # Pequeno atraso antes do rerun.
+                        time.sleep(0.5)
+                        # Reinicia a aplicação.
+                        st.rerun()
+
+                with col2:
+                    # Botão para continuar para a próxima etapa (processamento).
+                    if st.button("🔧 Continuar →", type="primary", key="continue_upload_btn"):
+                        # Verifica se uma coluna target foi selecionada.
+                        if 'target_col' not in st.session_state:
+                            # Exibe um erro se o target não foi selecionado.
+                            st.error("❌ Selecione um target primeiro!")
+                        else:
+                            # Verifica se o dataset tem amostras suficientes.
+                            if len(st.session_state.X) < 10:
+                                # Exibe um erro se o número de amostras for muito baixo.
+                                st.error("❌ Muito poucas amostras (mínimo 10)")
+                            else:
+                                # Define a próxima etapa como 2 (processamento).
+                                st.session_state.step = 2
+                                # Pequeno atraso antes do rerun.
+                                time.sleep(0.5)
+                                # Reinicia a aplicação para carregar a próxima etapa.
+                                st.rerun()
+
+            except Exception as e:
+                # Captura e exibe qualquer erro que ocorra durante o processamento do arquivo.
+                st.error(f"❌ Erro ao processar arquivo: {str(e)}")
+
+                try:
+                    # Tenta novamente ler o arquivo usando um encoding alternativo (latin-1).
+                    uploaded_file.seek(0) # Volta o ponteiro do arquivo para o início.
+                    data = pd.read_csv(uploaded_file, encoding='latin-1')
+                    # Mensagem de sucesso se o encoding alternativo funcionar.
+                    st.success("✅ Carregado com encoding alternativo")
+                    # Armazena os dados na sessão.
+                    st.session_state.data = data
+                    # Reinicia a aplicação para processar os dados recarregados.
+                    st.rerun()
+                except Exception:
+                    # Se mesmo o encoding alternativo falhar, exibe um erro final.
+                    st.error("❌ Não foi possível ler o arquivo.")
 
                     X = data.drop(columns=[target_col]).copy()
                     y = data[target_col].copy()
