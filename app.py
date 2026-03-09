@@ -749,157 +749,247 @@ class PowerfulDataProcessor:
 
     def process_target(self, y):
         """Processar target para classificação"""
+        # Verifica se o tipo de dado da série 'y' é 'object' (geralmente strings ou misto)
         if y.dtype == 'object':
+            # Se for 'object', usa pd.factorize para converter categorias em números inteiros
             y_encoded, _ = pd.factorize(y)
+            # Retorna a série codificada como um Pandas Series
             return pd.Series(y_encoded)
 
+        # Se o número de valores únicos na série 'y' for menor ou igual a 10 (indicando classes discretas)
         if len(pd.Series(y).unique()) <= 10:
+            # Converte a série para o tipo inteiro e retorna como um Pandas Series
             return pd.Series(y).astype(int)
 
+        # Caso contrário, retorna a série 'y' original como um Pandas Series (já numérico e com muitos valores únicos)
         return pd.Series(y)
 
     def process_target_regression(self, y):
         """Processar target para regressão"""
         try:
+            # Tenta converter a série 'y' para numérica, transformando erros em NaN
             y_numeric = pd.to_numeric(y, errors='coerce')
 
+            # Se o número de amostras for maior que 100
             if len(y_numeric) > 100:
+                # Calcula o primeiro quartil (Q1)
                 Q1 = y_numeric.quantile(0.25)
+                # Calcula o terceiro quartil (Q3)
                 Q3 = y_numeric.quantile(0.75)
+                # Calcula o Intervalo Interquartil (IQR)
                 IQR = Q3 - Q1
+                # Define o limite inferior para detecção de outliers (3 * IQR para um critério mais flexível)
                 lower_bound = Q1 - 3 * IQR
+                # Define o limite superior para detecção de outliers
                 upper_bound = Q3 + 3 * IQR
+                # Aplica winsorization, limitando os valores dentro dos limites calculados
                 y_numeric = np.clip(y_numeric, lower_bound, upper_bound)
 
+            # Retorna a série numérica processada, preenchendo quaisquer NaNs remanescentes com a mediana
             return pd.Series(y_numeric).fillna(pd.Series(y_numeric).median())
         except Exception:
+            # Em caso de erro, retorna a série 'y' original como um Pandas Series
             return pd.Series(y)
 
     def simple_fallback(self, data, target_col):
         """Fallback simples"""
         try:
+            # Se nenhum dado foi fornecido (data é None)
             if data is None:
+                # Define um número padrão de amostras
                 n_samples = 100
+                # Cria um DataFrame X com duas features numéricas aleatórias
                 X = pd.DataFrame({
                     'feature_1': np.random.randn(n_samples),
                     'feature_2': np.random.randn(n_samples),
                 })
+                # Cria uma série y para classificação binária aleatória
                 y = pd.Series(np.random.randint(0, 2, n_samples))
+                # Retorna os dados gerados e o tipo de problema 'classification'
                 return X, y, 'classification'
 
+            # Verifica se a coluna target especificada está no DataFrame
             if target_col in data.columns:
+                # Separa X (features) removendo a coluna target
                 X = data.drop(columns=[target_col]).copy()
+                # Separa y (target) pegando a coluna target
                 y = data[target_col].copy()
             else:
+                # Se a coluna target não estiver explicitamente no DataFrame, assume que a última coluna é a target
                 X = data.iloc[:, :-1].copy()
+                # Assume que a última coluna é a target
                 y = data.iloc[:, -1].copy()
 
+            # Cria uma cópia de X para pré-processamento numérico
             X_num = X.copy()
+            # Itera sobre cada coluna no DataFrame X_num
             for col in X_num.columns:
                 try:
+                    # Tenta converter a coluna para numérica, transformando erros em NaN
                     X_num[col] = pd.to_numeric(X_num[col], errors='coerce')
                 except Exception:
+                    # Se não for numérica, usa pd.factorize para codificar categorias em números
                     X_num[col] = pd.factorize(X_num[col])[0]
 
+            # Preenche quaisquer valores ausentes (NaN) em X_num com 0
             X_num = X_num.fillna(0)
 
             try:
+                # Obtém o número de valores únicos na série y
                 unique_y = len(pd.Series(y).unique())
+                # Se o tipo de dado de y for 'object' ou tiver poucos valores únicos (<= 10), assume classificação
                 if getattr(y, 'dtype', None) == 'object' or unique_y <= 10:
                     problem_type = 'classification'
                 else:
+                    # Caso contrário, assume regressão
                     problem_type = 'regression'
             except Exception:
+                # Em caso de erro na detecção do tipo de problema, assume regressão como fallback
                 problem_type = 'regression'
 
+            # Retorna os dados X e y processados de forma simples e o tipo de problema
             return X_num, y, problem_type
         except Exception:
+            # Em caso de qualquer erro crítico no fallback simples, gera dados aleatórios como último recurso
             n_samples = 100
+            # Cria um DataFrame X com duas features numéricas aleatórias
             X = pd.DataFrame({
                 'feature_1': np.random.randn(n_samples),
                 'feature_2': np.random.randn(n_samples),
             })
+            # Cria uma série y para classificação binária aleatória
             y = pd.Series(np.random.randint(0, 2, n_samples))
+            # Retorna os dados gerados e o tipo de problema 'classification'
             return X, y, 'classification'
 
 # ========== TREINAMENTO COM VALIDAÇÃO CRUZADA ==========
 class UltraCompleteTrainer:
+    # Inicializa a classe UltraCompleteTrainer.
     def __init__(self, problem_type):
+        # Armazena o tipo de problema (classificação ou regressão).
         self.problem_type = problem_type
+        # Dicionário para armazenar os objetos dos modelos treinados.
         self.models = {}
+        # Dicionário para armazenar as métricas de desempenho de cada modelo.
         self.results = {}
+        # Dicionário para armazenar os scores detalhados de cada fold da validação cruzada.
         self.cv_scores = {}
+        # Variável para armazenar o objeto do melhor modelo treinado.
         self.best_model = None
+        # Variável para armazenar o nome do melhor modelo.
         self.best_model_name = ""
+        # Flag para indicar se a validação cruzada será utilizada (sempre True para esta classe).
         self.use_cross_validation = True
+        # Número de folds a ser usado na validação cruzada, padrão é 5.
         self.n_folds = 5
 
+    # Método principal para iniciar o treinamento de forma segura com validação cruzada.
     def train_safe(self, X, y):
         """Treinamento com VALIDAÇÃO CRUZADA AUTOMÁTICA"""
+        # Exibe uma mensagem informativa no Streamlit.
         st.info("🔬 Iniciando treinamento com VALIDAÇÃO CRUZADA...")
 
         try:
+            # Verifica se o dataset é muito pequeno para validação cruzada robusta.
             if len(X) < 20:
+                # Exibe um aviso se o dataset for pequeno.
                 st.warning("⚠️ Dataset pequeno. Usando validação simples.")
+                # Chama um método de fallback para treinamento simples.
                 return self.train_simple_fallback(X, y)
 
+            # Obtém todos os modelos disponíveis para o tipo de problema.
             models = self.get_all_models()
 
+            # Contador para o número de modelos treinados.
             trained_count = 0
+            # Total de modelos a serem treinados.
             total_models = len(models)
 
+            # Cria uma barra de progresso no Streamlit.
             progress_bar = st.progress(0)
 
+            # Itera sobre cada modelo no dicionário de modelos.
             for name, model in models.items():
                 try:
+                    # Exibe um spinner enquanto o modelo está sendo treinado.
                     with st.spinner(f"🔄 {name} (CV {self.n_folds}-fold)..."):
+                        # Treina o modelo usando validação cruzada e obtém métricas e scores por fold.
                         cv_metrics, cv_scores = self.train_with_cross_validation(model, X, y)
 
+                        # Armazena o objeto do modelo.
                         self.models[name] = model
+                        # Armazena as métricas do modelo.
                         self.results[name] = cv_metrics
+                        # Armazena os scores por fold da validação cruzada.
                         self.cv_scores[name] = cv_scores
+                        # Incrementa o contador de modelos treinados.
                         trained_count += 1
 
+                        # Calcula o progresso e atualiza a barra.
                         progress = trained_count / total_models
                         progress_bar.progress(progress)
 
+                        # Determina a métrica principal para exibir (acurácia para classificação, R2 para regressão).
                         if self.problem_type == 'classification':
                             score = cv_metrics.get('accuracy', 0)
                         else:
                             score = cv_metrics.get('r2', 0)
 
+                        # Exibe o score médio e o desvio padrão do modelo.
                         st.write(f"✅ **{name}**: {score:.4f} ± {cv_metrics.get('std', 0.0):.4f}")
 
+                # Captura exceções que ocorrem durante o treinamento de um modelo específico.
                 except Exception as e:
+                    # Exibe um aviso se o treinamento de um modelo falhar.
                     st.write(f"⚠️ {name}: {str(e)[:50]}...")
+                    # Continua para o próximo modelo.
                     continue
 
+            # Verifica se há resultados após o treinamento.
             if self.results:
+                # Determina o melhor modelo com base nas métricas.
                 self.determine_best_model_complete()
+                # Exibe uma mensagem de sucesso com o número de modelos treinados.
                 st.success(f"✅ {trained_count} modelos treinados com VALIDAÇÃO CRUZADA!")
 
+                # Se um melhor modelo foi identificado.
                 if self.best_model_name:
+                    # Treina o melhor modelo novamente com todos os dados.
                     self.train_final_model(X, y)
+                    # Mostra os resultados detalhados da validação cruzada para o melhor modelo.
                     self.show_cv_results()
+                    # Exibe o nome do melhor modelo.
                     st.success(f"🏆 **MELHOR MODELO**: {self.best_model_name}")
 
+            # Retorna os resultados de todos os modelos e o nome do melhor modelo.
             return self.results, self.best_model_name
 
+        # Captura exceções gerais que ocorrem no método train_safe.
         except Exception as e:
+            # Exibe uma mensagem de erro.
             st.error(f"❌ Erro no treinamento: {str(e)}")
+            # Em caso de erro, retorna um treinamento de fallback simples.
             return self.train_simple_fallback(X, y)
 
+    # Método para treinar um modelo usando validação cruzada.
     def train_with_cross_validation(self, model, X, y):
         """Treina com validação cruzada e retorna métricas"""
+        # Importa as funções necessárias para validação cruzada.
         from sklearn.model_selection import cross_validate, StratifiedKFold, KFold
 
+        # Determina a estratégia de validação cruzada: Stratified K-Fold para classificação com mais de uma classe, senão K-Fold.
         if self.problem_type == 'classification' and len(np.unique(y)) > 1:
+            # Cria um objeto StratifiedKFold para manter a proporção das classes em cada fold.
             cv = StratifiedKFold(n_splits=self.n_folds, shuffle=True, random_state=42)
+            # Define o tipo de CV para registro.
             cv_type = "Stratified K-Fold"
         else:
+            # Cria um objeto KFold para divisão simples.
             cv = KFold(n_splits=self.n_folds, shuffle=True, random_state=42)
+            # Define o tipo de CV para registro.
             cv_type = "K-Fold"
 
+        # Define as métricas de scoring para classificação.
         if self.problem_type == 'classification':
             scoring = {
                 'accuracy': 'accuracy',
@@ -907,6 +997,7 @@ class UltraCompleteTrainer:
                 'recall': 'recall_weighted',
                 'f1': 'f1_weighted'
             }
+        # Define as métricas de scoring para regressão.
         else:
             scoring = {
                 'r2': 'r2',
@@ -915,292 +1006,414 @@ class UltraCompleteTrainer:
             }
 
         try:
+            # Executa a validação cruzada usando cross_validate.
             cv_results = cross_validate(
                 model, X, y,
                 cv=cv,
                 scoring=scoring,
                 return_train_score=False,
-                n_jobs=-1,
+                n_jobs=-1, # Usa todos os núcleos da CPU para paralelização.
                 verbose=0
             )
 
+            # Dicionário para armazenar as métricas médias.
             metrics = {}
+            # Dicionário para armazenar os scores de cada fold.
             scores_dict = {}
 
-            for metric_name in scoring.keys():
-                score_key = f'test_{metric_name}'
-                if score_key in cv_results:
-                    scores = cv_results[score_key]
-                    metrics[metric_name] = float(np.mean(scores))
-                    metrics[f'{metric_name}_std'] = float(np.std(scores))
-                    scores_dict[metric_name] = scores.tolist()
+            # Itera sobre as chaves de scoring para calcular a média e o desvio padrão.
+            for metric_name in scoring.keys():  # Itera sobre cada nome de métrica definido no dicionário 'scoring'.
+                score_key = f'test_{metric_name}'  # Constrói a chave esperada para os resultados de teste (e.g., 'test_accuracy').
+                if score_key in cv_results:  # Verifica se essa chave de score existe nos resultados da validação cruzada.
+                    scores = cv_results[score_key]  # Obtém a lista de scores para a métrica atual através de todos os folds.
+                    metrics[metric_name] = float(np.mean(scores))  # Calcula a média dos scores e armazena no dicionário 'metrics'.
+                    metrics[f'{metric_name}_std'] = float(np.std(scores))  # Calcula o desvio padrão dos scores e armazena no dicionário 'metrics'.
+                    scores_dict[metric_name] = scores.tolist()  # Converte a lista de scores para uma lista Python e armazena em 'scores_dict'.
 
-            if self.problem_type == 'regression' and 'neg_mean_squared_error' in metrics:
+            if self.problem_type == 'regression' and 'neg_mean_squared_error' in metrics:  # Verifica se o problema é regressão e se a métrica de erro quadrático médio negativo está presente.
+                # Calcula o RMSE (Root Mean Squared Error) a partir do MSE negativo, garantindo que o valor seja não negativo antes da raiz.
                 metrics['rmse'] = float(np.sqrt(max(0, -metrics['neg_mean_squared_error'])))
+                # Armazena o desvio padrão do RMSE, usando o desvio padrão do neg_mean_squared_error como aproximação.
                 metrics['rmse_std'] = float(metrics.get('neg_mean_squared_error_std', 0.0))
 
+            # Verifica se o problema é de regressão e se a métrica 'neg_mean_absolute_error' está disponível.
             if self.problem_type == 'regression' and 'neg_mean_absolute_error' in metrics:
+                # Calcula o MAE (Mean Absolute Error) invertendo o sinal da métrica neg_mean_absolute_error (que é negativa).
                 metrics['mae'] = float(-metrics['neg_mean_absolute_error'])
+                # Armazena o desvio padrão do MAE, obtendo-o do dicionário 'metrics' ou usando 0.0 como fallback.
                 metrics['mae_std'] = float(metrics.get('neg_mean_absolute_error_std', 0.0))
 
+
+            # Adiciona os tempos de treinamento e pontuação.
             metrics['fit_time'] = float(np.mean(cv_results['fit_time']))
             metrics['score_time'] = float(np.mean(cv_results['score_time']))
+            # Adiciona o tipo de CV usado.
             metrics['cv_type'] = cv_type
+            # Adiciona o número de folds.
             metrics['n_folds'] = self.n_folds
 
+            # Adiciona o desvio padrão da métrica principal para exibição simplificada.
             if self.problem_type == 'classification':
                 metrics['std'] = metrics.get('accuracy_std', 0.0)
             else:
                 metrics['std'] = metrics.get('r2_std', 0.0)
 
+            # Retorna as métricas e os scores por fold.
             return metrics, scores_dict
 
+        # Captura exceções que ocorrem durante a validação cruzada.
         except Exception as e:
+            # Exibe um aviso se o CV falhar para o modelo.
             st.write(f"⚠️ CV falhou para este modelo: {str(e)[:50]}")
+            # Retorna métricas de um treinamento simples como fallback e um dicionário vazio de scores.
             return self.train_simple_model(model, X, y), {}
 
+    # Método para realizar um treinamento simples (sem validação cruzada).
     def train_simple_model(self, model, X, y):
         """Fallback: treino simples sem CV"""
+        # Importa a função para dividir os dados em treino e teste.
         from sklearn.model_selection import train_test_split
 
+        # Divide os dados em conjuntos de treino e teste.
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42,
+            # Usa estratificação para classificação para manter as proporções de classe.
             stratify=y if self.problem_type == 'classification' else None
         )
 
+        # Treina o modelo com os dados de treino.
         model.fit(X_train, y_train)
+        # Faz previsões nos dados de teste.
         y_pred = model.predict(X_test)
 
+        # Calcula e retorna as métricas completas com base nas previsões.
         return self.calculate_complete_metrics(y_test, y_pred)
 
+    # Método para treinar o melhor modelo identificado com todos os dados disponíveis.
     def train_final_model(self, X, y):
         """Treina o melhor modelo com todos os dados"""
+        # Verifica se um melhor modelo foi identificado e existe no dicionário de modelos.
         if self.best_model_name and self.best_model_name in self.models:
+            # Importa a função clone para criar uma cópia "limpa" do modelo.
             from sklearn.base import clone
+            # Clona o melhor modelo para treiná-lo com todos os dados.
             final_model = clone(self.models[self.best_model_name])
+            # Treina o modelo final com todo o conjunto de dados.
             final_model.fit(X, y)
+            # Armazena o modelo final treinado.
             self.best_model = final_model
 
+    # Método para exibir os resultados da validação cruzada para o melhor modelo.
     def show_cv_results(self):
         """Mostra resultados da validação cruzada"""
+        # Verifica se o nome do melhor modelo está definido e se existem scores de CV para ele.
         if self.best_model_name and self.best_model_name in self.cv_scores:
+            # Obtém os scores de CV do melhor modelo.
             cv_scores = self.cv_scores[self.best_model_name]
 
+            # Cria um expansor no Streamlit para mostrar os resultados detalhados.
             with st.expander(f"📊 Resultados CV - {self.best_model_name}"):
+                # Itera sobre cada métrica e seus scores por fold.
                 for metric, scores in cv_scores.items():
+                    # Verifica se há scores para a métrica.
                     if len(scores) > 0:
+                        # Exibe o título da métrica.
                         st.write(f"**{metric} por fold:**")
+                        # Exibe o score para cada fold.
                         for i, score in enumerate(scores):
                             st.write(f"  Fold {i + 1}: {score:.4f}")
+                        # Exibe a média e o desvio padrão dos scores.
                         st.write(f"  **Média:** {np.mean(scores):.4f} ± {np.std(scores):.4f}")
+                        # Adiciona uma linha de separação.
                         st.write("---")
 
+    # Método de fallback completo para treinamento sem validação cruzada.
     def train_simple_fallback(self, X, y):
         """Fallback completo sem CV"""
+        # Exibe uma mensagem informativa.
         st.info("Usando treinamento simples (sem CV)...")
 
+        # Importa a função para dividir os dados em treino e teste.
         from sklearn.model_selection import train_test_split
 
+        # Divide os dados em conjuntos de treino e teste sem estratificação.
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
         )
 
+        # Escolhe um modelo Random Forest com base no tipo de problema.
         if self.problem_type == 'classification':
+            # Importa RandomForestClassifier.
             from sklearn.ensemble import RandomForestClassifier
+            # Inicializa o modelo de classificação.
             model = RandomForestClassifier(n_estimators=100, random_state=42)
         else:
+            # Importa RandomForestRegressor.
             from sklearn.ensemble import RandomForestRegressor
+            # Inicializa o modelo de regressão.
             model = RandomForestRegressor(n_estimators=100, random_state=42)
 
+        # Treina o modelo com os dados de treino.
         model.fit(X_train, y_train)
+        # Faz previsões nos dados de teste.
         y_pred = model.predict(X_test)
+        # Calcula as métricas completas.
         metrics = self.calculate_complete_metrics(y_test, y_pred)
 
+        # Define o nome do modelo de fallback.
         model_name = "Random Forest"
+        # Armazena o modelo de fallback.
         self.models[model_name] = model
+        # Armazena as métricas do modelo de fallback.
         self.results[model_name] = metrics
+        # Define o modelo de fallback como o melhor modelo.
         self.best_model_name = model_name
+        # Armazena o objeto do melhor modelo.
         self.best_model = model
 
+        # Retorna os resultados e o nome do melhor modelo.
         return self.results, self.best_model_name
 
+    # Método para obter todos os modelos disponíveis com base no tipo de problema.
     def get_all_models(self):
         """Retorna TODOS os modelos disponíveis"""
+        # Retorna modelos de classificação se o problema for 'classification'.
         if self.problem_type == 'classification':
             return self.get_all_classification_models()
+        # Retorna modelos de regressão se o problema for outro (regressão).
         else:
             return self.get_all_regression_models()
 
+    # Método para obter todos os modelos de classificação disponíveis.
     def get_all_classification_models(self):
         """Retorna TODOS os modelos de classificação"""
+        # Dicionário para armazenar os modelos de classificação.
         models = {}
 
         try:
+            # Importa modelos de ensemble para classificação.
             from sklearn.ensemble import (
                 RandomForestClassifier, GradientBoostingClassifier,
                 AdaBoostClassifier, ExtraTreesClassifier, BaggingClassifier
             )
 
+            # Adiciona Random Forest Classifier.
             models['Random Forest'] = RandomForestClassifier(
                 n_estimators=100, max_depth=10, random_state=42
             )
+            # Adiciona Gradient Boosting Classifier.
             models['Gradient Boosting'] = GradientBoostingClassifier(
                 n_estimators=100, learning_rate=0.1, random_state=42
             )
+            # Adiciona AdaBoost Classifier.
             models['AdaBoost'] = AdaBoostClassifier(
                 n_estimators=100, random_state=42
             )
+            # Adiciona Extra Trees Classifier.
             models['Extra Trees'] = ExtraTreesClassifier(
                 n_estimators=100, random_state=42
             )
+            # Adiciona Bagging Classifier.
             models['Bagging'] = BaggingClassifier(
                 n_estimators=50, random_state=42
             )
 
+            # Importa modelos lineares para classificação.
             from sklearn.linear_model import (
                 LogisticRegression, RidgeClassifier, SGDClassifier
             )
 
+            # Adiciona Logistic Regression.
             models['Logistic Regression'] = LogisticRegression(
                 max_iter=1000, random_state=42, C=1.0
             )
+            # Adiciona Ridge Classifier.
             models['Ridge Classifier'] = RidgeClassifier(
                 alpha=1.0, random_state=42
             )
+            # Adiciona SGD Classifier.
             models['SGD Classifier'] = SGDClassifier(
                 max_iter=1000, random_state=42
             )
 
+            # Importa modelos SVM e KNN para classificação.
             from sklearn.svm import SVC
             from sklearn.neighbors import KNeighborsClassifier
 
+            # Adiciona SVM com kernel RBF.
             models['SVM RBF'] = SVC(
                 kernel='rbf', probability=True, random_state=42
             )
+            # Adiciona K-Nearest Neighbors Classifier.
             models['KNN'] = KNeighborsClassifier(
                 n_neighbors=5
             )
 
+            # Importa Decision Tree e Naive Bayes para classificação.
             from sklearn.tree import DecisionTreeClassifier
             from sklearn.naive_bayes import GaussianNB
 
+            # Adiciona Decision Tree Classifier.
             models['Decision Tree'] = DecisionTreeClassifier(
                 max_depth=10, random_state=42
             )
+            # Adiciona Gaussian Naive Bayes.
             models['Gaussian NB'] = GaussianNB()
 
             try:
+                # Tenta importar e adicionar XGBoost Classifier.
                 from xgboost import XGBClassifier
+                # Adiciona XGBoost Classifier com parâmetros específicos para evitar avisos.
                 models['XGBoost'] = XGBClassifier(
                     n_estimators=100, random_state=42, use_label_encoder=False,
                     eval_metric='logloss'
                 )
             except Exception:
+                # Ignora se XGBoost não estiver disponível.
                 pass
 
             try:
+                # Tenta importar e adicionar LightGBM Classifier.
                 from lightgbm import LGBMClassifier
                 models['LightGBM'] = LGBMClassifier(
                     n_estimators=100, random_state=42
                 )
             except Exception:
+                # Ignora se LightGBM não estiver disponível.
                 pass
 
+            # Importa Linear Discriminant Analysis e MLP Classifier.
             from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
             from sklearn.neural_network import MLPClassifier
 
+            # Adiciona Linear Discriminant Analysis.
             models['LDA'] = LinearDiscriminantAnalysis()
+            # Adiciona Multi-layer Perceptron Classifier.
             models['MLP'] = MLPClassifier(
                 hidden_layer_sizes=(100,), max_iter=1000, random_state=42
             )
 
+        # Captura exceções que ocorrem ao carregar modelos.
         except Exception as e:
+            # Exibe um aviso se alguns modelos não puderem ser carregados.
             st.write(f"⚠️ Erro ao carregar alguns modelos: {str(e)[:50]}")
 
+        # Retorna o dicionário de modelos de classificação.
         return models
 
+    # Método para obter todos os modelos de regressão disponíveis.
     def get_all_regression_models(self):
         """Retorna TODOS os modelos de regressão"""
+        # Dicionário para armazenar os modelos de regressão.
         models = {}
 
         try:
+            # Importa modelos de ensemble para regressão.
             from sklearn.ensemble import (
                 RandomForestRegressor, GradientBoostingRegressor,
                 AdaBoostRegressor, ExtraTreesRegressor
             )
 
+            # Adiciona Random Forest Regressor.
             models['Random Forest'] = RandomForestRegressor(
                 n_estimators=100, max_depth=10, random_state=42
             )
+            # Adiciona Gradient Boosting Regressor.
             models['Gradient Boosting'] = GradientBoostingRegressor(
                 n_estimators=100, learning_rate=0.1, random_state=42
             )
+            # Adiciona AdaBoost Regressor.
             models['AdaBoost'] = AdaBoostRegressor(
                 n_estimators=100, random_state=42
             )
+            # Adiciona Extra Trees Regressor.
             models['Extra Trees'] = ExtraTreesRegressor(
                 n_estimators=100, random_state=42
             )
 
+            # Importa modelos lineares para regressão.
             from sklearn.linear_model import (
                 LinearRegression, Ridge, Lasso, ElasticNet,
                 BayesianRidge
             )
 
+            # Adiciona Linear Regression.
             models['Linear Regression'] = LinearRegression()
+            # Adiciona Ridge Regressor.
             models['Ridge'] = Ridge(alpha=1.0, random_state=42)
+            # Adiciona Lasso Regressor.
             models['Lasso'] = Lasso(alpha=0.1, random_state=42)
+            # Adiciona ElasticNet Regressor.
             models['ElasticNet'] = ElasticNet(alpha=0.1, l1_ratio=0.5, random_state=42)
+            # Adiciona Bayesian Ridge Regressor.
             models['Bayesian Ridge'] = BayesianRidge()
 
+            # Importa modelos SVM e KNN para regressão.
             from sklearn.svm import SVR
             from sklearn.neighbors import KNeighborsRegressor
 
+            # Adiciona Support Vector Regressor com kernel RBF.
             models['SVR RBF'] = SVR(kernel='rbf')
+            # Adiciona K-Nearest Neighbors Regressor.
             models['KNN Regressor'] = KNeighborsRegressor(n_neighbors=5)
 
+            # Importa Decision Tree Regressor.
             from sklearn.tree import DecisionTreeRegressor
 
+            # Adiciona Decision Tree Regressor.
             models['Decision Tree'] = DecisionTreeRegressor(
                 max_depth=10, random_state=42
             )
 
             try:
+                # Tenta importar e adicionar XGBoost Regressor.
                 from xgboost import XGBRegressor
                 models['XGBoost'] = XGBRegressor(
                     n_estimators=100, random_state=42
                 )
             except Exception:
+                # Ignora se XGBoost não estiver disponível.
                 pass
 
             try:
+                # Tenta importar e adicionar LightGBM Regressor.
                 from lightgbm import LGBMRegressor
                 models['LightGBM'] = LGBMRegressor(
                     n_estimators=100, random_state=42
                 )
             except Exception:
+                # Ignora se LightGBM não estiver disponível.
                 pass
 
+            # Importa MLP Regressor.
             from sklearn.neural_network import MLPRegressor
 
+            # Adiciona Multi-layer Perceptron Regressor.
             models['MLP Regressor'] = MLPRegressor(
                 hidden_layer_sizes=(100,), max_iter=1000, random_state=42
             )
 
+        # Captura exceções que ocorrem ao carregar modelos.
         except Exception as e:
+            # Exibe um aviso se alguns modelos não puderem ser carregados.
             st.write(f"⚠️ Erro ao carregar alguns modelos: {str(e)[:50]}")
 
+        # Retorna o dicionário de modelos de regressão.
         return models
 
+    # Método para calcular um conjunto completo de métricas.
     def calculate_complete_metrics(self, y_true, y_pred):
         """Cálculo COMPLETO de métricas"""
         try:
+            # Cálculos de métricas para classificação.
             if self.problem_type == 'classification':
+                # Importa as métricas de classificação necessárias.
                 from sklearn.metrics import (
                     accuracy_score, precision_score, recall_score,
                     f1_score
                 )
 
+                # Dicionário para armazenar as métricas de classificação.
                 metrics = {
                     'accuracy': float(accuracy_score(y_true, y_pred)),
                     'precision': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)),
@@ -1208,14 +1421,18 @@ class UltraCompleteTrainer:
                     'f1': float(f1_score(y_true, y_pred, average='weighted', zero_division=0))
                 }
 
+                # Retorna as métricas de classificação.
                 return metrics
 
+            # Cálculos de métricas para regressão.
             else:
+                # Importa as métricas de regressão necessárias.
                 from sklearn.metrics import (
                     r2_score, mean_squared_error, mean_absolute_error,
                     explained_variance_score
                 )
 
+                # Dicionário para armazenar as métricas de regressão.
                 metrics = {
                     'r2': float(r2_score(y_true, y_pred)),
                     'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
@@ -1223,78 +1440,109 @@ class UltraCompleteTrainer:
                     'explained_variance': float(explained_variance_score(y_true, y_pred))
                 }
 
+                # Retorna as métricas de regressão.
                 return metrics
 
+        # Captura exceções que ocorrem durante o cálculo de métricas.
         except Exception as e:
+            # Exibe um aviso se houver um erro no cálculo das métricas.
             st.write(f"⚠️ Erro em métricas: {str(e)[:50]}")
+            # Em caso de erro, retorna uma métrica básica para classificação.
             if self.problem_type == 'classification':
                 from sklearn.metrics import accuracy_score
                 return {'accuracy': float(accuracy_score(y_true, y_pred))}
+            # Em caso de erro, retorna uma métrica básica para regressão.
             else:
                 from sklearn.metrics import r2_score
                 return {'r2': float(r2_score(y_true, y_pred))}
 
+    # Método para determinar o melhor modelo considerando múltiplas métricas.
     def determine_best_model_complete(self):
         """Determina melhor modelo considerando múltiplas métricas"""
+        # Se não houver resultados, retorna.
         if not self.results:
             return
 
+        # Define pesos das métricas e a métrica principal para classificação.
         if self.problem_type == 'classification':
             metric_weights = {'accuracy': 0.4, 'f1': 0.3, 'precision': 0.2, 'recall': 0.1}
             main_metric = 'accuracy'
+        # Define pesos das métricas e a métrica principal para regressão.
         else:
-            metric_weights = {'r2': 0.5, 'rmse': -0.3, 'mae': -0.2}
+            metric_weights = {'r2': 0.5, 'rmse': -0.3, 'mae': -0.2} # RMSE e MAE são negativos porque menores são melhores
             main_metric = 'r2'
 
+        # Inicializa a melhor pontuação e o nome do melhor modelo.
         best_score = -float('inf')
         best_name = ""
 
+        # Itera sobre os resultados de cada modelo.
         for name, metrics in self.results.items():
+            # Inicializa a pontuação ponderada.
             weighted_score = 0
 
+            # Calcula a pontuação ponderada com base nas métricas e seus pesos.
             for metric, weight in metric_weights.items():
                 if metric in metrics:
                     value = metrics[metric]
+                    # Normaliza RMSE e MAE (onde valores menores são melhores).
                     if metric in ['rmse', 'mae']:
+                        # Coleta todos os valores da métrica para normalização.
                         metric_values = [m.get(metric, 0) for m in self.results.values() if metric in m]
+                        # Encontra o valor máximo para normalização.
                         max_val = max(metric_values) if metric_values else 0
                         if max_val > 0:
+                            # Normaliza para que 1 seja o melhor (menor valor).
                             normalized = 1 - (value / max_val)
                             weighted_score += normalized * abs(weight)
+                    # Para outras métricas (onde valores maiores são melhores).
                     else:
                         weighted_score += value * weight
 
+            # Combina a métrica principal com a pontuação ponderada.
             if main_metric in metrics:
                 main_score = metrics[main_metric]
-                final_score = 0.7 * main_score + 0.3 * weighted_score
+                final_score = 0.7 * main_score + 0.3 * weighted_score # Ponderação entre métrica principal e score ponderado
 
+                # Atualiza o melhor modelo se a pontuação atual for superior.
                 if final_score > best_score:
                     best_score = final_score
                     best_name = name
 
+        # Armazena o nome e o objeto do melhor modelo.
         self.best_model_name = best_name
         self.best_model = self.models.get(best_name)
 
+        # Adiciona o score ponderado ao resultado do melhor modelo.
         if best_name in self.results:
             self.results[best_name]['weighted_score'] = float(best_score)
 
+    # Método para gerar um DataFrame de ranking dos modelos.
     def get_ranking(self):
         """Ranking com todas as métricas"""
+        # Se não houver resultados, retorna um DataFrame vazio.
         if not self.results:
             return pd.DataFrame(columns=['Modelo', 'Score', 'Tipo', 'CV Score ± Std'])
 
+        # Lista para armazenar os dados do ranking.
         ranking = []
+        # Itera sobre os resultados de cada modelo.
         for name, metrics in self.results.items():
+            # Obtém a métrica principal e seu desvio padrão para classificação.
             if self.problem_type == 'classification':
                 score = metrics.get('accuracy', metrics.get('f1', metrics.get('score', 0)))
                 score_std = metrics.get('accuracy_std', 0)
+            # Obtém a métrica principal e seu desvio padrão para regressão.
             else:
                 score = metrics.get('r2', metrics.get('explained_variance', metrics.get('score', 0)))
                 score_std = metrics.get('r2_std', 0)
 
+            # Determina o tipo do modelo.
             model_type = self.get_model_type(name)
+            # Formata o score e seu desvio padrão para exibição.
             cv_score = f"{float(score):.4f} ± {float(score_std):.4f}"
 
+            # Adiciona os dados do modelo à lista de ranking.
             ranking.append({
                 'Modelo': name,
                 'Score': float(score),
@@ -1302,34 +1550,50 @@ class UltraCompleteTrainer:
                 'Tipo': model_type
             })
 
+        # Cria um DataFrame a partir da lista de ranking.
         df = pd.DataFrame(ranking)
+        # Classifica o DataFrame pelo score em ordem decrescente.
         df = df.sort_values('Score', ascending=False).reset_index(drop=True)
+        # Insere uma coluna de 'Posição'.
         df.insert(0, 'Posição', range(1, len(df) + 1))
 
+        # Retorna o DataFrame de ranking.
         return df
 
+    # Método para determinar o tipo de um modelo com base em seu nome.
     def get_model_type(self, model_name):
         """Determina o tipo do modelo baseado no nome"""
+        # Converte o nome do modelo para minúsculas para comparação.
         model_name_lower = model_name.lower()
 
+        # Verifica e retorna o tipo de boosting.
         if any(x in model_name_lower for x in ['xgboost', 'lightgbm']):
             return 'Boosting'
+        # Verifica e retorna o tipo de ensemble.
         elif any(x in model_name_lower for x in ['random forest', 'extra trees', 'bagging']):
             return 'Ensemble'
+        # Verifica e retorna o tipo de SVM.
         elif any(x in model_name_lower for x in ['svm', 'svc', 'svr']):
             return 'SVM'
+        # Verifica e retorna o tipo linear.
         elif any(x in model_name_lower for x in ['linear', 'logistic', 'ridge', 'lasso', 'elastic']):
             return 'Linear'
+        # Verifica e retorna o tipo KNN.
         elif any(x in model_name_lower for x in ['knn', 'neighbors']):
             return 'KNN'
+        # Verifica e retorna o tipo de árvore.
         elif any(x in model_name_lower for x in ['tree', 'decision']):
             return 'Árvore'
+        # Verifica e retorna o tipo Bayes.
         elif any(x in model_name_lower for x in ['naive', 'bayes']):
             return 'Bayes'
+        # Verifica e retorna o tipo de rede neural.
         elif any(x in model_name_lower for x in ['mlp', 'neural']):
             return 'Neural'
+        # Verifica e retorna o tipo de boosting (alternativo, já que alguns já foram pegos).
         elif any(x in model_name_lower for x in ['adaboost', 'gradient']):
             return 'Boosting'
+        # Retorna 'Outro' se nenhum tipo for correspondido.
         else:
             return 'Outro'
 
