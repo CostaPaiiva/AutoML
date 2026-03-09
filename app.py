@@ -1605,135 +1605,166 @@ class TargetDetector:
         Detecta a coluna target automaticamente com inteligência
         Retorna: (target_col, X, y, confidence_score, problem_type)
         """
+        # Verifica se uma sugestão de coluna target foi fornecida e se ela existe no DataFrame.
         if user_hint and user_hint in data.columns:
+            # Se a sugestão existe, cria um DataFrame 'X' (features) removendo a coluna target sugerida.
             X = data.drop(columns=[user_hint]).copy()
+            # Cria uma Série 'y' (target) com os valores da coluna target sugerida.
             y = data[user_hint].copy()
+            # Detecta o tipo de problema (classificação ou regressão) com base na série 'y'.
             problem_type = TargetDetector.detect_problem_type(y)
+            # Retorna a coluna target, os dados X e y, uma confiança alta (1.0) e o tipo de problema.
             return user_hint, X, y, 1.0, problem_type
 
         st.info("🔍 Analisando dataset para detectar target automaticamente...")
 
         scores = {}
 
+        # Itera sobre cada coluna no DataFrame de entrada 'data'.
         for col in data.columns:
+            # Chama o método estático 'analyze_column' para obter uma pontuação de "target" para a coluna atual.
             score = TargetDetector.analyze_column(data[col], col)
+            # Armazena a pontuação no dicionário 'scores', usando o nome da coluna como chave.
             scores[col] = score
 
+        # Classifica as colunas com base em suas pontuações de "target" em ordem decrescente.
         sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
+        # Exibe um cabeçalho para a seção de análise automática no Streamlit.
         st.write("📊 **Análise automática:**")
+        # Cria um DataFrame Pandas a partir das pontuações ordenadas para exibição.
         analysis_df = pd.DataFrame(sorted_scores, columns=['Coluna', 'Score Target'])
 
+        # Divide a interface do Streamlit em duas colunas.
         col1, col2 = st.columns(2)
         with col1:
+            # Exibe as 10 principais colunas com suas pontuações de "target" em um DataFrame.
             st.dataframe(analysis_df.head(10), use_container_width=True)
 
         with col2:
+            # Verifica se há pontuações de colunas disponíveis.
             if len(sorted_scores) > 0:
-                top_col = sorted_scores[0][0]
-                try:
-                    fig = px.histogram(data, x=top_col, title=f"Distribuição: {top_col}")
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception:
-                    st.write(f"*Não foi possível criar gráfico para {top_col}*")
+            # Obtém o nome da coluna com a maior pontuação.
+            top_col = sorted_scores[0][0]
+            try:
+                # Tenta criar e exibir um histograma da distribuição da coluna principal.
+                fig = px.histogram(data, x=top_col, title=f"Distribuição: {top_col}")
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception:
+                # Em caso de erro ao gerar o gráfico, exibe uma mensagem.
+                st.write(f"*Não foi possível criar gráfico para {top_col}*")
 
+        # Filtra os principais candidatos a target, pegando os 3 primeiros com score acima de 0.3.
         top_candidates = [col for col, score in sorted_scores[:3] if score > 0.3]
 
+        # Verifica se não há candidatos de target fortes.
         if not top_candidates:
+            # Exibe um aviso se a detecção automática falhou.
             st.warning("⚠️ Não consegui detectar target automaticamente.")
+            # Define a última coluna como target padrão.
             target_col = data.columns[-1]
+            # Define uma baixa confiança.
             confidence = 0.1
         else:
+            # Exibe um cabeçalho para a seleção de target.
             st.write("🎯 **Candidatos a target (escolha ou confirme):**")
+            # Permite ao usuário selecionar a coluna target a partir dos candidatos ou escolher "Nenhuma das acima".
             target_col = st.selectbox(
-                "Selecione a coluna target:",
-                options=top_candidates + ["⚠️ Nenhuma das acima"],
-                index=0,
-                key="auto_target_select"
+            "Selecione a coluna target:",
+            options=top_candidates + ["⚠️ Nenhuma das acima"], # Adiciona a opção de fallback manual.
+            index=0, # Define o primeiro item como padrão.
+            key="auto_target_select" # Chave única para o widget Streamlit.
             )
 
+            # Verifica se o usuário selecionou a opção de fallback manual.
             if target_col == "⚠️ Nenhuma das acima":
+                # Se sim, apresenta um novo selectbox com todas as colunas para seleção manual.
                 target_col = st.selectbox(
                     "Selecione manualmente:",
-                    options=data.columns.tolist(),
-                    index=len(data.columns) - 1,
-                    key="manual_fallback_select"
+                    options=data.columns.tolist(), # Opções são todas as colunas do DataFrame.
+                    index=len(data.columns) - 1, # Define a última coluna como padrão.
+                    key="manual_fallback_select" # Chave única para o widget Streamlit.
                 )
-                confidence = 0.5
+                confidence = 0.5 # Define uma confiança média para a seleção manual.
             else:
-                confidence = scores[target_col]
+                confidence = scores[target_col] # Se uma coluna foi selecionada, usa a pontuação calculada.
 
+        # Separa as features (X) removendo a coluna target.
         X = data.drop(columns=[target_col]).copy()
+        # Separa o target (y) pegando a coluna target.
         y = data[target_col].copy()
 
+        # Detecta o tipo de problema (classificação ou regressão) com base na série 'y'.
         problem_type = TargetDetector.detect_problem_type(y)
 
+        # Exibe mensagens de sucesso no Streamlit com a coluna target detectada/selecionada, confiança e tipo de problema.
         st.success(f"✅ Target detectado: **{target_col}** (confiança: {confidence:.2f})")
         st.success(f"📊 Tipo de problema: **{problem_type.upper()}**")
         st.write(f"📐 Dimensões: X={X.shape}, y={y.shape}")
 
+        # Retorna a coluna target, os dados X e y, a pontuação de confiança e o tipo de problema.
         return target_col, X, y, confidence, problem_type
 
     @staticmethod
     def analyze_column(column, col_name):
         """Analisa uma coluna e retorna score de ser target"""
-        score = 0
+        score = 0 # Inicializa o score da coluna como 0.
 
         try:
-            n_unique = column.nunique()
-            n_total = len(column)
-            unique_ratio = n_unique / n_total if n_total > 0 else 0
+            n_unique = column.nunique() # Calcula o número de valores únicos na coluna.
+            n_total = len(column) # Obtém o número total de elementos na coluna.
+            unique_ratio = n_unique / n_total if n_total > 0 else 0 # Calcula a proporção de valores únicos.
 
-            if n_unique <= 10:
-                score += 0.3
-            elif unique_ratio > 0.9:
-                score += 0.2
+            if n_unique <= 10: # Se o número de valores únicos for pequeno (até 10), sugere que pode ser uma classe.
+                score += 0.3 # Adiciona 0.3 ao score.
+            elif unique_ratio > 0.9: # Se a proporção de valores únicos for muito alta (quase todos únicos), sugere que não é um ID.
+                score += 0.2 # Adiciona 0.2 ao score.
 
             target_keywords = ['target', 'label', 'class', 'score', 'rating',
-                               'price', 'value', 'output', 'result', 'y']
-            col_lower = col_name.lower()
-            if any(keyword in col_lower for keyword in target_keywords):
-                score += 0.4
+                               'price', 'value', 'output', 'result', 'y'] # Define palavras-chave comuns para colunas target.
+            col_lower = col_name.lower() # Converte o nome da coluna para minúsculas.
+            if any(keyword in col_lower for keyword in target_keywords): # Verifica se alguma palavra-chave está no nome da coluna.
+                score += 0.4 # Adiciona 0.4 ao score se encontrar uma palavra-chave.
 
-            if n_unique > 1:
-                value_counts = column.value_counts(normalize=True)
+            if n_unique > 1: # Se houver mais de um valor único.
+                value_counts = column.value_counts(normalize=True) # Calcula a contagem de frequência normalizada dos valores.
                 try:
-                    entropy = -sum(p * np.log(p) for p in value_counts if p > 0)
-                    max_entropy = np.log(n_unique)
-                    if max_entropy > 0:
-                        normalized_entropy = entropy / max_entropy
-                        if normalized_entropy < 0.7:
-                            score += 0.2
+                    entropy = -sum(p * np.log(p) for p in value_counts if p > 0) # Calcula a entropia da coluna.
+                    max_entropy = np.log(n_unique) # Calcula a entropia máxima possível para o número de valores únicos.
+                    if max_entropy > 0: # Evita divisão por zero.
+                        normalized_entropy = entropy / max_entropy # Normaliza a entropia.
+                        if normalized_entropy < 0.7: # Se a entropia normalizada for baixa, sugere que é um target (classes bem definidas).
+                            score += 0.2 # Adiciona 0.2 ao score.
                 except Exception:
-                    pass
+                    pass # Ignora erros no cálculo da entropia.
 
-            if pd.api.types.is_numeric_dtype(column):
+            if pd.api.types.is_numeric_dtype(column): # Verifica se a coluna é de tipo numérico.
                 try:
-                    if column.abs().max() > 1000:
-                        score += 0.1
+                    if column.abs().max() > 1000: # Se o valor máximo absoluto for muito alto, sugere regressão.
+                        score += 0.1 # Adiciona 0.1 ao score.
                 except Exception:
-                    pass
+                    pass # Ignora erros ao verificar o valor máximo.
 
-            missing_ratio = column.isna().sum() / n_total if n_total > 0 else 0
-            if missing_ratio > 0.3:
-                score -= 0.3
+            missing_ratio = column.isna().sum() / n_total if n_total > 0 else 0 # Calcula a proporção de valores ausentes.
+            if missing_ratio > 0.3: # Se houver muitos valores ausentes, diminui o score (menos provável de ser target).
+                score -= 0.3 # Subtrai 0.3 do score.
 
-            if any(x in col_lower for x in ['id', 'code', 'num', 'index', 'key']):
-                score -= 0.4
+            if any(x in col_lower for x in ['id', 'code', 'num', 'index', 'key']): # Verifica palavras-chave comuns para IDs.
+                score -= 0.4 # Diminui o score se parecer ser um ID.
 
-            if n_unique == n_total and n_total > 100:
-                score -= 0.5
+            if n_unique == n_total and n_total > 100: # Se todos os valores forem únicos e há muitas linhas, sugere um ID/identificador.
+                score -= 0.5 # Diminui o score significativamente.
 
-            date_keywords = ['date', 'time', 'day', 'month', 'year']
-            if any(x in col_lower for x in date_keywords):
-                score -= 0.3
+            date_keywords = ['date', 'time', 'day', 'month', 'year'] # Define palavras-chave comuns para datas.
+            if any(x in col_lower for x in date_keywords): # Verifica se o nome da coluna contém palavras-chave de data.
+                score -= 0.3 # Diminui o score se parecer ser uma coluna de data.
 
-            score = max(0, min(1, score))
+            score = max(0, min(1, score)) # Garante que o score esteja entre 0 e 1.
 
         except Exception:
-            score = 0
+            score = 0 # Em caso de qualquer erro, define o score como 0.
 
-        return round(score, 3)
+        return round(score, 3) # Retorna o score arredondado para 3 casas decimais.
 
     @staticmethod
     def detect_problem_type(y):
