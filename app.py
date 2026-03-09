@@ -651,62 +651,100 @@ class PowerfulDataProcessor:
 
     def advanced_feature_engineering(self, X):
         """Feature engineering avançado"""
+        # Cria uma cópia do DataFrame X para evitar modificar o original
         X_engineered = X.copy()
 
+        # Seleciona as colunas numéricas do DataFrame
         numeric_cols = X_engineered.select_dtypes(include=[np.number]).columns.tolist()
 
+        # Verifica se há pelo menos duas colunas numéricas para criar interações
         if len(numeric_cols) >= 2:
+            # Itera sobre as primeiras 3 colunas numéricas para criar features de interação
             for i in range(min(3, len(numeric_cols))):
+                # Itera sobre as próximas 3 colunas numéricas (a partir de 'i+1')
                 for j in range(i + 1, min(i + 3, len(numeric_cols))):
+                    # Obtém o nome da primeira coluna
                     col1 = numeric_cols[i]
+                    # Obtém o nome da segunda coluna
                     col2 = numeric_cols[j]
+                    # Adiciona uma nova feature que é o produto das duas colunas
                     X_engineered[f'{col1}_x_{col2}'] = X_engineered[col1] * X_engineered[col2]
+                    # Adiciona uma nova feature que é a divisão da primeira pela segunda (com pequena constante para evitar divisão por zero)
                     X_engineered[f'{col1}_div_{col2}'] = X_engineered[col1] / (X_engineered[col2] + 1e-10)
 
+        # Verifica se há colunas numéricas para criar features estatísticas
         if len(numeric_cols) > 0:
+            # Adiciona uma feature com a média de todas as colunas numéricas para cada linha
             X_engineered['mean_features'] = X_engineered[numeric_cols].mean(axis=1)
+            # Adiciona uma feature com o desvio padrão de todas as colunas numéricas para cada linha
             X_engineered['std_features'] = X_engineered[numeric_cols].std(axis=1)
+            # Adiciona uma feature com o valor máximo de todas as colunas numéricas para cada linha
             X_engineered['max_features'] = X_engineered[numeric_cols].max(axis=1)
+            # Adiciona uma feature com o valor mínimo de todas as colunas numéricas para cada linha
             X_engineered['min_features'] = X_engineered[numeric_cols].min(axis=1)
 
+        # Verifica se há colunas numéricas para criar features polinomiais/transformadas
         if len(numeric_cols) > 0:
+            # Itera sobre as primeiras 3 colunas numéricas
             for col in numeric_cols[:3]:
+                # Adiciona uma nova feature que é o quadrado da coluna
                 X_engineered[f'{col}_squared'] = X_engineered[col] ** 2
+                # Adiciona uma nova feature que é a raiz quadrada do valor absoluto da coluna (com pequena constante para evitar raiz de zero)
                 X_engineered[f'{col}_sqrt'] = np.sqrt(np.abs(X_engineered[col]) + 1e-10)
 
+        # Retorna o DataFrame com as novas features engenheiradas
         return X_engineered
 
     def smart_feature_selection(self, X, y, problem_type):
         """Seleção inteligente de features"""
         try:
+            # Se o número de features for menor ou igual a 20, não realiza seleção e retorna o X original
             if X.shape[1] <= 20:
                 return X
 
+            # Importa a classe VarianceThreshold para remover features com baixa variância
             from sklearn.feature_selection import VarianceThreshold
+            # Inicializa o seletor com um limite de variância de 0.01 (remove features com variância muito baixa)
             selector = VarianceThreshold(threshold=0.01)
+            # Aplica a transformação para remover as features de baixa variância
             X_selected = selector.fit_transform(X)
 
+            # Verifica se o número de features ainda é alto após a filtragem por variância
             if X_selected.shape[1] > 50:
+                # Se for um problema de classificação, usa RandomForestClassifier
                 if problem_type == 'classification':
                     from sklearn.ensemble import RandomForestClassifier
+                    # Inicializa o modelo RandomForestClassifier com 50 estimadores e random_state fixo
                     model = RandomForestClassifier(n_estimators=50, random_state=42)
+                # Se for um problema de regressão, usa RandomForestRegressor
                 else:
                     from sklearn.ensemble import RandomForestRegressor
+                    # Inicializa o modelo RandomForestRegressor com 50 estimadores e random_state fixo
                     model = RandomForestRegressor(n_estimators=50, random_state=42)
 
+                # Treina o modelo nas features selecionadas e no target
                 model.fit(X_selected, y)
+                # Obtém a importância de cada feature do modelo treinado
                 importances = model.feature_importances_
 
+                # Obtém os índices das 30 features mais importantes
                 top_indices = np.argsort(importances)[-30:]
+                # Seleciona apenas as 30 features mais importantes do dataset
                 X_final = X_selected[:, top_indices]
+                # Armazena os índices das features selecionadas (para uso futuro, se necessário)
                 self.selected_features = top_indices
+            # Se o número de features após a filtragem por variância for <= 50, usa todas elas
             else:
                 X_final = X_selected
 
+            # Retorna o DataFrame com as features selecionadas
             return X_final
 
+        # Captura qualquer exceção que ocorra durante o processo de seleção de features
         except Exception as e:
+            # Exibe uma mensagem de aviso no Streamlit se a seleção de features falhar
             st.write(f"⚠️ Feature selection falhou: {str(e)[:50]}")
+            # Em caso de falha, retorna o DataFrame X original (sem seleção)
             return X
 
     def process_target(self, y):
