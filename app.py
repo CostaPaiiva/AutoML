@@ -569,49 +569,84 @@ class PowerfulDataProcessor:
 
     def powerful_preprocessing(self, X):
         """Pré-processamento avançado"""
+        # Cria uma cópia do DataFrame X para evitar modificar o original
         X_clean = X.copy()
 
+        # Itera sobre cada coluna no DataFrame copiado
         for col in X_clean.columns:
+            # Verifica se a coluna possui valores ausentes (NaN)
             if X_clean[col].isna().any():
+                # Se a coluna for de tipo numérico
                 if pd.api.types.is_numeric_dtype(X_clean[col]):
+                    # Calcula a assimetria (skewness) da coluna numérica
                     if X_clean[col].skew() > 1:
+                        # Se for muito assimétrica (skew > 1), preenche NaN com a mediana
                         X_clean[col] = X_clean[col].fillna(X_clean[col].median())
                     else:
+                        # Caso contrário, preenche NaN com a média
                         X_clean[col] = X_clean[col].fillna(X_clean[col].mean())
                 else:
+                    # Se a coluna não for numérica (categórica), calcula a moda
                     mode = X_clean[col].mode()
+                    # Define o valor de preenchimento como a moda (se existir), ou "missing"
                     fill_value = mode.iloc[0] if len(mode) > 0 else "missing"
+                    # Preenche os valores ausentes com o valor definido
                     X_clean[col] = X_clean[col].fillna(fill_value)
 
+        # Seleciona as colunas numéricas do DataFrame
         numeric_cols = X_clean.select_dtypes(include=[np.number]).columns.tolist()
+        # Seleciona as colunas categóricas do DataFrame
         categorical_cols = X_clean.select_dtypes(exclude=[np.number]).columns.tolist()
 
+        # Se houver colunas numéricas
         if numeric_cols:
+            # Cria uma cópia do subconjunto de colunas numéricas
             X_numeric = X_clean[numeric_cols].copy()
 
+            # Itera sobre cada coluna numérica para tratamento de outliers (winsorization)
             for col in X_numeric.columns:
+                # Calcula o primeiro quartil (Q1)
                 Q1 = X_numeric[col].quantile(0.25)
+                # Calcula o terceiro quartil (Q3)
                 Q3 = X_numeric[col].quantile(0.75)
+                # Calcula o Intervalo Interquartil (IQR)
                 IQR = Q3 - Q1
+                # Calcula o limite inferior para outliers
                 lower_bound = Q1 - 1.5 * IQR
+                # Calcula o limite superior para outliers
                 upper_bound = Q3 + 1.5 * IQR
+                # Limita os valores da coluna dentro dos limites inferior e superior (winsorization)
                 X_numeric[col] = np.clip(X_numeric[col], lower_bound, upper_bound)
 
+            # Importa o StandardScaler para normalização
             from sklearn.preprocessing import StandardScaler
+            # Inicializa o StandardScaler
             self.scaler = StandardScaler()
+            # Aplica a padronização (transformação z-score) aos dados numéricos
             X_numeric_scaled = self.scaler.fit_transform(X_numeric)
+            # Atribui os dados padronizados de volta às colunas numéricas no DataFrame principal
             X_clean[numeric_cols] = X_numeric_scaled
 
+        # Se houver colunas categóricas
         if categorical_cols:
+            # Itera sobre cada coluna categórica
             for col in categorical_cols:
+                # Obtém o número de valores únicos na coluna (convertendo para string para robustez)
                 unique_vals = len(X_clean[col].astype(str).unique())
+                # Se o número de valores únicos for menor ou igual a 10 (baixa cardinalidade)
                 if unique_vals <= 10:
+                    # Aplica One-Hot Encoding (cria colunas dummy)
                     dummies = pd.get_dummies(X_clean[col], prefix=col, drop_first=True)
+                    # Concatena as novas colunas dummy e remove a coluna categórica original
                     X_clean = pd.concat([X_clean.drop(columns=[col]), dummies], axis=1)
                 else:
+                    # Se tiver alta cardinalidade, aplica Frequency Encoding
+                    # Calcula a frequência normalizada de cada valor
                     freq = X_clean[col].astype(str).value_counts(normalize=True)
+                    # Substitui os valores da coluna pela sua frequência
                     X_clean[col] = X_clean[col].astype(str).map(freq)
 
+        # Retorna o DataFrame processado
         return X_clean
 
     def advanced_feature_engineering(self, X):
