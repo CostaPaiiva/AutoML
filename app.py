@@ -1407,18 +1407,17 @@ class UltraCompleteTrainer:
         try:
             # Cálculos de métricas para classificação.
             if self.problem_type == 'classification':
-                # Importa as métricas de classificação necessárias.
-                from sklearn.metrics import (
-                    accuracy_score, precision_score, recall_score,
-                    f1_score
+
+                from sklearn.metrics import ( # Importa o módulo metrics da biblioteca sklearn para cálculo de métricas de avaliação.
+                    accuracy_score, precision_score, recall_score, # Importa as funções específicas para acurácia, precisão e recall.
+                    f1_score # Importa a função F1-score para classificação.
                 )
 
-                # Dicionário para armazenar as métricas de classificação.
-                metrics = {
-                    'accuracy': float(accuracy_score(y_true, y_pred)),
-                    'precision': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)),
-                    'recall': float(recall_score(y_true, y_pred, average='weighted', zero_division=0)),
-                    'f1': float(f1_score(y_true, y_pred, average='weighted', zero_division=0))
+                metrics = { # Inicializa um dicionário para armazenar as métricas calculadas.
+                    'accuracy': float(accuracy_score(y_true, y_pred)), # Calcula a acurácia (precisão geral) e armazena como float.
+                    'precision': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)), # Calcula a precisão ponderada para classificação multiclasse e armazena como float.
+                    'recall': float(recall_score(y_true, y_pred, average='weighted', zero_division=0)), # Calcula o recall ponderado para classificação multiclasse e armazena como float.
+                    'f1': float(f1_score(y_true, y_pred, average='weighted', zero_division=0)) # Calcula o F1-score ponderado para classificação multiclasse e armazena como float.
                 }
 
                 # Retorna as métricas de classificação.
@@ -1504,7 +1503,6 @@ class UltraCompleteTrainer:
                 main_score = metrics[main_metric]
                 final_score = 0.7 * main_score + 0.3 * weighted_score # Ponderação entre métrica principal e score ponderado
 
-                # Atualiza o melhor modelo se a pontuação atual for superior.
                 if final_score > best_score:
                     best_score = final_score
                     best_name = name
