@@ -513,37 +513,58 @@ class PowerfulDataProcessor:
     def detect_problem_type_smart(self, y):
         """Detecção INTELIGENTE de tipo de problema"""
         try:
+            # Tenta converter a série 'y' para numérica, substituindo valores não numéricos por NaN
             y_numeric = pd.to_numeric(y, errors='coerce')
+            # Conta o número de valores não nulos na série numérica
             not_na = y_numeric.notna().sum()
 
+            # Se a proporção de valores não nulos for menor que 80%, assume classificação (dados muito bagunçados)
             if not_na / len(y) < 0.8:
                 return 'classification'
 
+            # Remove os valores nulos da série numérica para análise
             y_clean = y_numeric.dropna()
+            # Obtém o número de valores únicos na série limpa
             unique_vals = len(y_clean.unique())
 
+            # Se o número de valores únicos for menor ou igual a 10
             if unique_vals <= 10:
+                # Verifica se todos os valores podem ser convertidos para inteiros sem perda de informação
                 if all(y_clean.astype(int) == y_clean):
+                    # Se sim, e com poucos valores únicos, é provável que seja classificação
                     return 'classification'
                 else:
+                    # Se não, e mesmo com poucos valores únicos (float), pode ser regressão
                     return 'regression'
+            # Se o número de valores únicos estiver entre 11 e 30
             elif unique_vals <= 30:
+                # Calcula a contagem de frequência normalizada de cada valor
                 value_counts = y_clean.value_counts(normalize=True)
+                # Se algum valor único representa mais de 30% dos dados, sugere classificação
                 if (value_counts > 0.3).any():
                     return 'classification'
                 else:
+                    # Caso contrário, sugere regressão
                     return 'regression'
+            # Se o número de valores únicos for maior que 30, é provável que seja regressão
             else:
                 return 'regression'
 
+        # Captura qualquer exceção que ocorra durante o bloco try
         except Exception:
             try:
+                # Tenta obter o número de valores únicos diretamente da série original 'y'
                 unique_vals = len(y.unique())
+                # Se o tipo de dado for 'object' (string) ou tiver poucos valores únicos (<= 10)
                 if y.dtype == 'object' or unique_vals <= 10:
+                    # Retorna classificação
                     return 'classification'
                 else:
+                    # Caso contrário, retorna regressão
                     return 'regression'
+            # Captura qualquer exceção do segundo bloco try
             except Exception:
+                # Como fallback final, retorna regressão se tudo falhar
                 return 'regression'
 
     def powerful_preprocessing(self, X):
