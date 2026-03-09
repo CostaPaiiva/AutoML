@@ -405,68 +405,109 @@ class PowerfulDataProcessor:
         3. X e y já separados
         """
         try:
+            # Verifica se X e y já foram fornecidos diretamente
             if X is not None and y is not None:
+                # Define o nome da coluna target como "target" para fins internos
                 self.target_col = "target"
+                # Detecta o tipo de problema (classificação ou regressão) se não for fornecido
                 self.problem_type = problem_type or self.detect_problem_type_smart(y)
 
+                # Realiza o pré-processamento poderoso nos dados X
                 X_processed = self.powerful_preprocessing(X)
+                # Aplica engenharia de features avançada aos dados processados
                 X_engineered = self.advanced_feature_engineering(X_processed)
+                # Executa a seleção inteligente de features
                 X_final = self.smart_feature_selection(X_engineered, y, self.problem_type)
 
+                # Se for um problema de classificação, processa a coluna target
                 if self.problem_type == 'classification':
                     y_processed = self.process_target(y)
+                # Caso contrário (regressão), processa a coluna target para regressão
                 else:
                     y_processed = self.process_target_regression(y)
 
+                # Retorna os dados X e y processados e o tipo de problema
                 return X_final, y_processed, self.problem_type
 
+            # Verifica se um DataFrame 'data' foi fornecido
             elif data is not None:
+                # Se a coluna target não foi especificada e a detecção automática está ativada
                 if target_col is None and auto_detect:
+                    # Exibe uma mensagem informando que a detecção automática está em andamento
                     st.info("🔍 Detectando target automaticamente...")
+                    # Chama o detector de target para identificar a coluna target e o tipo de problema
                     target_col, X, y, confidence, problem_type = TargetDetector.detect_target(data)
 
+                    # Armazena o nome da coluna target detectada
                     self.target_col = target_col
+                    # Armazena o tipo de problema detectado
                     self.problem_type = problem_type
 
+                    # Realiza o pré-processamento poderoso nos dados X
                     X_processed = self.powerful_preprocessing(X)
+                    # Aplica engenharia de features avançada aos dados processados
                     X_engineered = self.advanced_feature_engineering(X_processed)
+                    # Executa a seleção inteligente de features
                     X_final = self.smart_feature_selection(X_engineered, y, problem_type)
 
+                    # Se for um problema de classificação, processa a coluna target
                     if problem_type == 'classification':
                         y_processed = self.process_target(y)
+                    # Caso contrário (regressão), processa a coluna target para regressão
                     else:
                         y_processed = self.process_target_regression(y)
 
+                    # Retorna os dados X e y processados e o tipo de problema
                     return X_final, y_processed, problem_type
 
+                # Se a coluna target foi especificada ou a detecção automática não foi usada
                 else:
+                    # Verifica se a coluna target especificada está no DataFrame
                     if target_col in data.columns:
+                        # Separa X (features) removendo a coluna target
                         X = data.drop(columns=[target_col]).copy()
+                        # Separa y (target) pegando a coluna target
                         y = data[target_col].copy()
+                    # Se a coluna target não estiver explicitamente no DataFrame (fallback)
                     else:
+                        # Assume que a última coluna é a target
                         X = data.iloc[:, :-1].copy()
+                        # Assume que a última coluna é a target
                         y = data.iloc[:, -1].copy()
 
+                    # Detecta o tipo de problema usando a função inteligente
                     problem_type = self.detect_problem_type_smart(y)
+                    # Armazena o tipo de problema detectado
                     self.problem_type = problem_type
+                    # Armazena o nome da coluna target
                     self.target_col = target_col
 
+                    # Realiza o pré-processamento poderoso nos dados X
                     X_processed = self.powerful_preprocessing(X)
+                    # Aplica engenharia de features avançada aos dados processados
                     X_engineered = self.advanced_feature_engineering(X_processed)
+                    # Executa a seleção inteligente de features
                     X_final = self.smart_feature_selection(X_engineered, y, problem_type)
 
+                    # Se for um problema de classificação, processa a coluna target
                     if problem_type == 'classification':
                         y_processed = self.process_target(y)
+                    # Caso contrário (regressão), processa a coluna target para regressão
                     else:
                         y_processed = self.process_target_regression(y)
 
+                    # Retorna os dados X e y processados e o tipo de problema
                     return X_final, y_processed, problem_type
 
+            # Se nem 'data' nem 'X' e 'y' foram fornecidos, levanta um erro
             else:
                 raise ValueError("❌ Dados insuficientes. Forneça 'data' ou 'X' e 'y'")
 
+        # Captura qualquer exceção que ocorra durante o processamento
         except Exception as e:
+            # Exibe uma mensagem de erro no Streamlit
             st.error(f"Erro no processamento: {str(e)}")
+            # Retorna um fallback simples para evitar que o programa pare
             return self.simple_fallback(data if data is not None else X, target_col)
 
     def detect_problem_type_smart(self, y):
