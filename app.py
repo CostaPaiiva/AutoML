@@ -2908,3 +2908,11 @@ class UltraRobustApp:
             del st.session_state[key]
         # Força um novo rerun da aplicação, que iniciará do zero.
         st.rerun()
+
+        # ========== EXECUÇÃO DA APLICAÇÃO ==========
+def main():
+    app = UltraRobustApp()
+    app.run()
+
+if __name__ == "__main__":
+    main()

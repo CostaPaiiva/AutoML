@@ -1058,12 +1058,12 @@ class AdvancedDashboard:
         """Configura os callbacks do dashboard"""
 
         # Callback para atualizar o gráfico de comparação de métricas
-        @self.app.callback(
-            Output('metrics-comparison', 'figure'),
-            Input('metric-selector', 'value')
+        @self.app.callback(  # Decorador que registra a função 'update_metrics_comparison' como um callback Dash
+            Output('metrics-comparison', 'figure'),  # Define o componente de saída: a propriedade 'figure' do gráfico com ID 'metrics-comparison'
+            Input('metric-selector', 'value')  # Define o componente de entrada: a propriedade 'value' do dropdown com ID 'metric-selector'
         )
-        def update_metrics_comparison(selected_metric):
-            return self._build_metrics_comparison_figure(selected_metric)
+        def update_metrics_comparison(selected_metric):  # Define a função de callback que será executada quando o valor do 'metric-selector' mudar
+            return self._build_metrics_comparison_figure(selected_metric)  # Chama um método interno para construir o gráfico de comparação de métricas com base na opção selecionada e retorna a figura
 
         # Callback para atualizar o gráfico de previsões
         @self.app.callback(  # Decorador que registra a função 'update_predictions_plot' como um callback Dash
@@ -1242,3 +1242,4 @@ class AdvancedDashboard:
         print(f"Dashboard rodando em http://localhost:{port}")
         # Inicia o servidor do Dash
         self.app.run(debug=True, port=port)
+
