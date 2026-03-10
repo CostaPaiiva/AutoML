@@ -641,134 +641,165 @@ class AdvancedDashboard:
 
         # Tenta gerar previsões
         try:
+            # Tenta gerar previsões usando o modelo selecionado e os dados de teste (X_test)
             y_pred = model.predict(self.X_test)
+        # Captura qualquer exceção que ocorra durante o processo de previsão
         except Exception as exc:
+            # Em caso de erro, retorna uma figura vazia com uma mensagem de erro
             return self._build_empty_figure(
                 f"Visualização de Previsões - {selected_model}",
                 f"Erro ao gerar previsões: {str(exc)}"
             )
 
+        # Converte os rótulos reais (y_test) para um array NumPy e o "achata" (ravel) para 1D
         y_true = np.asarray(self.y_test).ravel()
+        # Converte as previsões (y_pred) para um array NumPy e o "achata" (ravel) para 1D
         y_pred = np.asarray(y_pred).ravel()
 
-        # Retorna figura vazia se os dados estiverem vazios
+        # Verifica se os arrays de valores reais ou previstos estão vazios
         if len(y_true) == 0 or len(y_pred) == 0:
+            # Se estiverem vazios, retorna uma figura vazia com uma mensagem de dados insuficientes
             return self._build_empty_figure(
                 f"Visualização de Previsões - {selected_model}",
                 "Dados insuficientes para gerar o gráfico."
             )
 
         # Se for regressão, exibe dispersão real vs previsto
+        # Se o tipo de problema for "Regressão", cria um gráfico de dispersão de previsões vs. real
         if self.detect_problem_type() == "Regressão":
+            # Calcula os valores mínimo e máximo entre os valores reais e previstos para definir os limites do eixo
             min_val = float(min(np.min(y_true), np.min(y_pred)))
             max_val = float(max(np.max(y_true), np.max(y_pred)))
 
+            # Cria uma nova figura Plotly
             fig = go.Figure()
 
+            # Adiciona um traço de dispersão para os pontos de previsões
             fig.add_trace(
-                go.Scatter(
-                    x=y_true,
-                    y=y_pred,
-                    mode='markers',
-                    name='Previsões',
-                    marker=dict(size=8, opacity=0.75),
-                    hovertemplate="Valor real: %{x}<br>Valor previsto: %{y}<extra></extra>",
-                )
+            go.Scatter(
+                x=y_true,  # Eixo X: valores reais
+                y=y_pred,  # Eixo Y: valores previstos
+                mode='markers',  # Define o modo como marcadores (pontos)
+                name='Previsões',  # Nome da série para a legenda
+                marker=dict(size=8, opacity=0.75),  # Estilo dos marcadores: tamanho e opacidade
+                hovertemplate="Valor real: %{x}<br>Valor previsto: %{y}<extra></extra>",  # Modelo do tooltip ao passar o mouse
+            )
             )
 
+            # Adiciona uma linha diagonal de 45 graus que representa o cenário ideal (previsão = real)
             fig.add_trace(
-                go.Scatter(
-                    x=[min_val, max_val],
-                    y=[min_val, max_val],
-                    mode='lines',
-                    name='Ideal',
-                    line=dict(color='red', dash='dash'),
-                    hoverinfo='skip'
-                )
+            go.Scatter(
+                x=[min_val, max_val],  # Eixo X: do mínimo ao máximo
+                y=[min_val, max_val],  # Eixo Y: do mínimo ao máximo
+                mode='lines',  # Define o modo como linhas
+                name='Ideal',  # Nome da série para a legenda
+                line=dict(color='red', dash='dash'),  # Estilo da linha: cor vermelha e tracejada
+                hoverinfo='skip'  # Ignora informações ao passar o mouse para esta linha
+            )
             )
 
+            # Atualiza o layout do gráfico de dispersão
             fig.update_layout(
-                title=f"Previsões vs Real - {selected_model}",
-                xaxis_title="Valor Real",
-                yaxis_title="Valor Previsto",
-                template="plotly_dark",
-                height=500,
-                margin=dict(l=40, r=20, t=60, b=40),
+            title=f"Previsões vs Real - {selected_model}",  # Título do gráfico, incluindo o nome do modelo
+            xaxis_title="Valor Real",  # Título do eixo X
+            yaxis_title="Valor Previsto",  # Título do eixo Y
+            template="plotly_dark",  # Define o tema do Plotly como escuro
+            height=500,  # Altura do gráfico em pixels
+            margin=dict(l=40, r=20, t=60, b=40),  # Margens do gráfico (esquerda, direita, topo, baixo)
             )
 
+            # Retorna a figura do gráfico de dispersão
             return fig
 
-        # Se for classificação, exibe matriz de confusão
+        # Se não for regressão (ou seja, é classificação), cria uma matriz de confusão
+        # Obtém todos os rótulos únicos presentes nos valores reais e previstos, ordenados
         labels = pd.unique(np.concatenate([y_true, y_pred])).tolist()
+        # Calcula a matriz de confusão usando os rótulos únicos
         cm = confusion_matrix(y_true, y_pred, labels=labels)
 
+        # Cria uma nova figura Plotly para a matriz de confusão (heatmap)
         fig = go.Figure(
             data=go.Heatmap(
-                z=cm,
-                x=[f"Previsto: {label}" for label in labels],
-                y=[f"Real: {label}" for label in labels],
-                colorscale='Blues',
-                text=cm,
-                texttemplate='%{text}',
-                textfont={"size": 11},
-                hovertemplate="Real: %{y}<br>Previsto: %{x}<br>Contagem: %{z}<extra></extra>",
+            z=cm,  # Dados da matriz (valores da matriz de confusão)
+            x=[f"Previsto: {label}" for label in labels],  # Rótulos do eixo X (previsto)
+            y=[f"Real: {label}" for label in labels],  # Rótulos do eixo Y (real)
+            colorscale='Blues',  # Escala de cores para o heatmap
+            text=cm,  # Texto a ser exibido dentro de cada célula (os próprios valores da matriz)
+            texttemplate='%{text}',  # Formato do texto: exibe o valor literal
+            textfont={"size": 11},  # Tamanho da fonte do texto nas células
+            hovertemplate="Real: %{y}<br>Previsto: %{x}<br>Contagem: %{z}<extra></extra>",  # Modelo do tooltip
             )
         )
 
+        # Atualiza o layout do gráfico da matriz de confusão
         fig.update_layout(
-            title=f"Matriz de Confusão - {selected_model}",
-            template="plotly_dark",
-            height=500,
-            margin=dict(l=40, r=20, t=60, b=40),
+            title=f"Matriz de Confusão - {selected_model}",  # Título do gráfico, incluindo o nome do modelo
+            template="plotly_dark",  # Define o tema do Plotly como escuro
+            height=500,  # Altura do gráfico em pixels
+            margin=dict(l=40, r=20, t=60, b=40),  # Margens do gráfico (esquerda, direita, topo, baixo)
         )
 
+        # Retorna a figura da matriz de confusão
         return fig
 
-    # Cria um link de download a partir de bytes
-    def _build_download_link(self, label, link_id, mime_type, filename, content_bytes):
-        """Cria um link de download em base64"""
+        # Define um método para construir um link de download em base64
+        def _build_download_link(self, label, link_id, mime_type, filename, content_bytes):
+            """Cria um link de download em base64"""
+        # Codifica o conteúdo em bytes para base64 e depois decodifica para string UTF-8
         content_b64 = base64.b64encode(content_bytes).decode("utf-8")
 
+        # Retorna um componente HTML 'a' (âncora) configurado para download
         return html.A(
-            label,
-            id=link_id,
-            href=f"data:{mime_type};base64,{content_b64}",
-            download=filename,
-            className="btn btn-success mt-2"
+            label,  # Texto visível do link
+            id=link_id,  # ID único para o link HTML
+            href=f"data:{mime_type};base64,{content_b64}",  # Atributo href com o URI de dados base64
+            download=filename,  # Atributo download para sugerir o nome do arquivo ao baixar
+            className="btn btn-success mt-2"  # Classes CSS para estilizar o link como um botão Bootstrap
         )
 
     # Gera as linhas do relatório em texto
     def _generate_report_lines(self):
         """Gera o conteúdo textual do relatório"""
+        # Obtém o nome e a métrica principal do melhor modelo
         best_model_name, best_metric = self._get_best_model_info()
+        # Detecta o tipo de problema (classificação ou regressão)
         problem_type = self.detect_problem_type()
 
+        # Inicializa uma lista para armazenar as linhas do relatório
         lines = [
-            "Relatório de Machine Learning",
-            f"Gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            f"Tipo de Problema: {problem_type}",
-            f"Total de Modelos: {len(self.results)}",
-            f"Melhor Modelo: {best_model_name or 'N/A'}",
-            f"Métrica Principal do Melhor Modelo: {self._format_metric(best_metric)}",
-            "",
-            "Resumo dos Modelos:",
+            "Relatório de Machine Learning",  # Título principal do relatório
+            f"Gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",  # Data e hora de geração
+            "",  # Linha em branco para espaçamento
+            f"Tipo de Problema: {problem_type}",  # Tipo de problema detectado
+            f"Total de Modelos: {len(self.results)}",  # Número total de modelos avaliados
+            f"Melhor Modelo: {best_model_name or 'N/A'}",  # Nome do melhor modelo
+            f"Métrica Principal do Melhor Modelo: {self._format_metric(best_metric)}",  # Métrica do melhor modelo formatada
+            "",  # Linha em branco para espaçamento
+            "Resumo dos Modelos:",  # Subtítulo para a seção de resumo dos modelos
         ]
 
+        # Ordena os resultados dos modelos com base na métrica principal, em ordem decrescente (do melhor para o pior)
         sorted_results = sorted(
-            self.results.items(),
-            key=lambda item: self.get_primary_metric(item[1]),
-            reverse=True
+            self.results.items(),  # Itens do dicionário de resultados (nome do modelo, métricas)
+            key=lambda item: self.get_primary_metric(item[1]),  # Função chave para ordenação: a métrica principal de cada modelo
+            reverse=True  # Ordena do maior para o menor valor da métrica principal
         )
 
+        # Itera sobre os resultados ordenados para adicionar detalhes de cada modelo ao relatório
         for idx, (model_name, metrics) in enumerate(sorted_results, start=1):
+            # Adiciona uma linha com o rank, nome do modelo e sua métrica principal
             lines.append(f"{idx}. {model_name} | métrica principal = {self.get_primary_metric(metrics):.4f}")
 
+            # Verifica se as métricas do modelo são um dicionário
             if isinstance(metrics, dict):
+                # Itera sobre cada par chave-valor das métricas
                 for key, value in metrics.items():
-                    if self._is_numeric(value):
+                    # Verifica se o valor da métrica é numérico e não é a matriz de confusão
+                    if self._is_numeric(value) and key != "confusion_matrix": # Adiciona condição para ignorar confusion_matrix
+                        # Adiciona uma linha indentada com o nome da métrica e seu valor formatado
                         lines.append(f"   - {key}: {float(value):.4f}")
 
+        # Retorna a lista de linhas que compõem o relatório
         return lines
 
     # Escapa caracteres especiais para PDF
@@ -784,55 +815,63 @@ class AdvancedDashboard:
     # Gera um PDF simples sem dependências externas
     def _generate_simple_pdf(self, lines):
         """Gera um PDF simples e válido usando apenas bibliotecas padrão"""
+        # Escapa caracteres especiais em cada linha e limita a 60 linhas para evitar PDFs muito grandes
         safe_lines = [self._escape_pdf_text(line) for line in lines[:60]]
 
+        # Lista para armazenar as partes do conteúdo do stream de texto do PDF
         content_parts = [
-            "BT",
-            "/F1 11 Tf",
-            "50 760 Td",
-            "14 TL",
+            "BT",          # Inicia o bloco de texto (Begin Text)
+            "/F1 11 Tf",   # Define a fonte (F1) e o tamanho (11 pontos)
+            "50 760 Td",   # Define a posição inicial do texto (x=50, y=760)
+            "14 TL",       # Define o espaçamento entre as linhas (leading) para 14 unidades
         ]
 
+        # Adiciona cada linha de texto ao stream
         for idx, line in enumerate(safe_lines):
             if idx > 0:
-                content_parts.append("T*")
-            content_parts.append(f"({line}) Tj")
+                content_parts.append("T*")  # Avança para a próxima linha (Next Line)
+            content_parts.append(f"({line}) Tj")  # Adiciona o texto atual (Show Text)
 
-        content_parts.append("ET")
+        content_parts.append("ET")  # Encerra o bloco de texto (End Text)
+        # Junta todas as partes do conteúdo em uma única string e a codifica para bytes (latin-1, tratando erros)
         stream = "\n".join(content_parts).encode("latin-1", errors="replace")
 
+        # Dicionário que mapeia números de objeto PDF para seus conteúdos em bytes
         objects = {
-            1: b"<< /Type /Catalog /Pages 2 0 R >>",
-            2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-            4: b"<< /Length " + str(len(stream)).encode("latin-1") + b" >>\nstream\n" + stream + b"\nendstream",
-            5: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            1: b"<< /Type /Catalog /Pages 2 0 R >>", # Objeto de Catálogo raiz do PDF
+            2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>", # Objeto de Páginas, referenciando a página 3
+            3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>", # Objeto da Página, definindo mídia, conteúdo (4) e recursos (fonte F1)
+            4: b"<< /Length " + str(len(stream)).encode("latin-1") + b" >>\nstream\n" + stream + b"\nendstream", # Objeto de Conteúdo da Página, contendo o stream de texto
+            5: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", # Objeto de Fonte, definindo Helvetica como fonte
         }
 
-        pdf = b"%PDF-1.4\n"
-        offsets = {0: 0}
+        pdf = b"%PDF-1.4\n" # Cabeçalho do arquivo PDF, indicando a versão
+        offsets = {0: 0} # Dicionário para armazenar os offsets de byte de cada objeto (offset 0 para o objeto nulo)
 
+        # Adiciona cada objeto ao corpo do PDF e registra seus offsets
         for obj_num in range(1, 6):
-            offsets[obj_num] = len(pdf)
-            pdf += f"{obj_num} 0 obj\n".encode("latin-1")
-            pdf += objects[obj_num] + b"\n"
-            pdf += b"endobj\n"
+            offsets[obj_num] = len(pdf) # Salva o offset atual antes de adicionar o objeto
+            pdf += f"{obj_num} 0 obj\n".encode("latin-1") # Escreve o cabeçalho do objeto (ex: "1 0 obj")
+            pdf += objects[obj_num] + b"\n" # Adiciona o conteúdo do objeto
+            pdf += b"endobj\n" # Encerra o objeto
 
-        xref_offset = len(pdf)
-        pdf += b"xref\n"
-        pdf += b"0 6\n"
-        pdf += b"0000000000 65535 f \n"
+        xref_offset = len(pdf) # Salva o offset da tabela de referência cruzada (xref)
+        pdf += b"xref\n" # Inicia a tabela xref
+        pdf += b"0 6\n" # Indica que a tabela xref começa no objeto 0 e tem 6 entradas (0 a 5)
+        pdf += b"0000000000 65535 f \n" # Entrada para o objeto 0 (nulo), 'f' indica que está livre
 
+        # Adiciona as entradas para cada objeto na tabela xref
         for obj_num in range(1, 6):
+            # Formata o offset do objeto para 10 dígitos com zeros à esquerda e '00000 n' (n indica que é um objeto usado)
             pdf += f"{offsets[obj_num]:010d} 00000 n \n".encode("latin-1")
 
-        pdf += b"trailer\n"
-        pdf += b"<< /Size 6 /Root 1 0 R >>\n"
-        pdf += b"startxref\n"
-        pdf += f"{xref_offset}\n".encode("latin-1")
-        pdf += b"%%EOF"
+        pdf += b"trailer\n" # Inicia o trailer do PDF
+        pdf += b"<< /Size 6 /Root 1 0 R >>\n" # Dicionário do trailer, indicando o número total de objetos e o objeto raiz (Catálogo)
+        pdf += b"startxref\n" # Indica onde a tabela xref começa
+        pdf += f"{xref_offset}\n".encode("latin-1") # Adiciona o offset da xref salvo anteriormente
+        pdf += b"%%EOF" # Marca o final do arquivo PDF
 
-        return pdf
+        return pdf # Retorna o arquivo PDF como bytes
 
     # Serializa o melhor modelo para download
     def _serialize_best_model(self):
@@ -851,9 +890,13 @@ class AdvancedDashboard:
 
         # Tenta serializar o modelo
         try:
+            # 'protocol=pickle.HIGHEST_PROTOCOL' garante que a versão mais recente e eficiente do protocolo de pickle seja utilizada.
             payload = pickle.dumps(model_to_save, protocol=pickle.HIGHEST_PROTOCOL)
+            # Retorna a sequência de bytes serializada (payload) e uma mensagem de sucesso formatada.
             return payload, f"Modelo '{best_model_name}' serializado com sucesso."
+        # Captura qualquer exceção que possa ocorrer durante o processo de serialização.
         except Exception as exc:
+            # Em caso de erro, retorna None como payload e uma mensagem de erro detalhada.
             return None, f"Falha ao serializar o modelo: {str(exc)}"
 
     # Método para configurar o layout do dashboard
@@ -865,193 +908,251 @@ class AdvancedDashboard:
         problem_type = self.detect_problem_type()
 
         # Define o layout principal como um container fluido
+        # Define o layout principal da aplicação Dash como um container fluido (que ocupa toda a largura disponível)
         self.app.layout = dbc.Container([
-            # Linha para o cabeçalho
+            # Inicia uma linha para organizar os componentes horizontalmente
             dbc.Row([
-                # Coluna contendo o título do dashboard
-                dbc.Col([
-                    html.H1("Dashboard de Machine Learning Avançado",
-                            className="text-center mb-4"),
-                    html.Hr(),
-                ], width=12)
-            ], className="mb-4"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Adiciona um título principal ao dashboard, centralizado e com margem inferior
+                html.H1("Dashboard de Machine Learning Avançado",
+                    className="text-center mb-4"),
+                # Adiciona uma linha horizontal para separação visual
+                html.Hr(),
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para o resumo do projeto
+            # Inicia uma nova linha para o resumo do projeto
             dbc.Row([
-                # Coluna para o card de resumo do projeto
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("📊 Resumo do Projeto"),
-                        dbc.CardBody([
-                            html.P(f"Total de Modelos Treinados: {len(self.results)}"),
-                            html.P(f"Melhor Modelo: {best_model_name or 'N/A'}"),
-                            html.P(f"Métrica do Melhor Modelo: {self._format_metric(best_metric)}"),
-                        ])
-                    ], className="mb-4")
-                ], width=4),
+            # Inicia uma coluna para o card de resumo (ocupa 4 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("📊 Resumo do Projeto"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Exibe o número total de modelos treinados
+                    html.P(f"Total de Modelos Treinados: {len(self.results)}"),
+                    # Exibe o nome do melhor modelo (ou 'N/A' se não houver)
+                    html.P(f"Melhor Modelo: {best_model_name or 'N/A'}"),
+                    # Exibe o valor formatado da métrica do melhor modelo
+                    html.P(f"Métrica do Melhor Modelo: {self._format_metric(best_metric)}"),
+                ])
+                ], className="mb-4")  # Adiciona margem inferior ao card
+            ], width=4),  # A coluna ocupa 4 unidades de largura
 
-                # Coluna para o card do tipo de problema
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("🎯 Tipo de Problema"),
-                        dbc.CardBody([
-                            html.H3(problem_type, id="problem-type",
-                                    className="text-center"),
-                            html.P("Classificação/Regressão detectada automaticamente",
-                                   className="text-muted text-center")
-                        ])
-                    ], className="mb-4")
-                ], width=4),
+            # Inicia uma coluna para o card do tipo de problema (ocupa 4 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("🎯 Tipo de Problema"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Exibe o tipo de problema detectado (Classificação/Regressão), centralizado
+                    html.H3(problem_type, id="problem-type",
+                        className="text-center"),
+                    # Adiciona uma descrição auxiliar, centralizada e em texto "muted"
+                    html.P("Classificação/Regressão detectada automaticamente",
+                       className="text-muted text-center")
+                ])
+                ], className="mb-4")  # Adiciona margem inferior ao card
+            ], width=4),  # A coluna ocupa 4 unidades de largura
 
-                # Coluna para o card de estatísticas
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("📈 Estatísticas"),
-                        dbc.CardBody([
-                            html.P(
-                                f"Modelos Otimizados: {len([m for m in self.models.keys() if 'optimized' in m.lower() or 'otimizado' in m.lower()])}"
-                            ),
-                            html.P(
-                                f"Inclui Ensemble: {'Sim' if any('ensemble' in m.lower() for m in self.models.keys()) else 'Não'}"
-                            ),
-                            html.P(
-                                f"Status: {'✅ Completo' if self.results else '⚠️ Sem resultados'}"
-                            )
-                        ])
-                    ], className="mb-4")
-                ], width=4)
-            ], className="mb-4"),
+            # Inicia uma coluna para o card de estatísticas (ocupa 4 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("📈 Estatísticas"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Exibe o número de modelos otimizados (detectados pelo nome)
+                    html.P(
+                    f"Modelos Otimizados: {len([m for m in self.models.keys() if 'optimized' in m.lower() or 'otimizado' in m.lower()])}"
+                    ),
+                    # Informa se há modelos de ensemble (detectados pelo nome)
+                    html.P(
+                    f"Inclui Ensemble: {'Sim' if any('ensemble' in m.lower() for m in self.models.keys()) else 'Não'}"
+                    ),
+                    # Exibe o status geral (se há resultados ou não)
+                    html.P(
+                    f"Status: {'✅ Completo' if self.results else '⚠️ Sem resultados'}"
+                    )
+                ])
+                ], className="mb-4")  # Adiciona margem inferior ao card
+            ], width=4)  # A coluna ocupa 4 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para o ranking dos modelos
+            # Inicia uma nova linha para o gráfico de ranking dos modelos
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("🏆 Ranking dos Modelos (do melhor para o pior)"),
-                        dbc.CardBody([
-                            dcc.Graph(
-                                id='ranking-plot',
-                                figure=self._build_ranking_figure()
-                            )
-                        ])
-                    ])
-                ], width=12)
-            ], className="mb-4"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("🏆 Ranking dos Modelos (do melhor para o pior)"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Adiciona um componente gráfico (Plotly)
+                    dcc.Graph(
+                    id='ranking-plot',  # ID único para o gráfico
+                    figure=self._build_ranking_figure()  # Define a figura inicial chamando um método interno
+                    )
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para gráficos de comparação de métricas
+            # Inicia uma nova linha para os gráficos de comparação de métricas
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("📊 Comparação de Métricas"),
-                        dbc.CardBody([
-                            dcc.Dropdown(
-                                id='metric-selector',
-                                options=[
-                                    {'label': 'Todas as Métricas', 'value': 'all'},
-                                    {'label': 'Acurácia/F1/R2', 'value': 'main'},
-                                    {'label': 'Métricas Detalhadas', 'value': 'detailed'}
-                                ],
-                                value='main',
-                                className="mb-3"
-                            ),
-                            dcc.Graph(
-                                id='metrics-comparison',
-                                figure=self._build_metrics_comparison_figure('main')
-                            )
-                        ])
-                    ])
-                ], width=12)
-            ], className="mb-4"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("📊 Comparação de Métricas"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Adiciona um dropdown para selecionar o tipo de comparação de métricas
+                    dcc.Dropdown(
+                    id='metric-selector',  # ID único para o dropdown
+                    options=[  # Define as opções do dropdown
+                        {'label': 'Todas as Métricas', 'value': 'all'},
+                        {'label': 'Acurácia/F1/R2', 'value': 'main'},
+                        {'label': 'Métricas Detalhadas', 'value': 'detailed'}
+                    ],
+                    value='main',  # Define a opção padrão selecionada
+                    className="mb-3"  # Adiciona margem inferior ao dropdown
+                    ),
+                    # Adiciona um componente gráfico para exibir a comparação de métricas
+                    dcc.Graph(
+                    id='metrics-comparison',  # ID único para o gráfico
+                    figure=self._build_metrics_comparison_figure('main')  # Define a figura inicial com a opção padrão
+                    )
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para o gráfico de importância das features
+            # Inicia uma nova linha para o gráfico de importância das features
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("🔍 Feature Importance - Top 5 Modelos"),
-                        dbc.CardBody([
-                            dcc.Graph(
-                                id='feature-importance-plot',
-                                figure=self._build_feature_importance_figure()
-                            )
-                        ])
-                    ])
-                ], width=12)
-            ], className="mb-4"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("🔍 Feature Importance - Top 5 Modelos"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Adiciona um componente gráfico para exibir a importância das features
+                    dcc.Graph(
+                    id='feature-importance-plot',  # ID único para o gráfico
+                    figure=self._build_feature_importance_figure()  # Define a figura inicial
+                    )
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para visualização de previsões
+            # Inicia uma nova linha para a visualização de previsões
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("🔮 Visualização de Previsões vs Real"),
-                        dbc.CardBody([
-                            dcc.Dropdown(
-                                id='model-selector',
-                                options=[{'label': m, 'value': m}
-                                         for m in self.models.keys()],
-                                value=self._default_model_name(),
-                                className="mb-3"
-                            ),
-                            dcc.Graph(
-                                id='predictions-plot',
-                                figure=self._build_predictions_figure(self._default_model_name())
-                            )
-                        ])
-                    ])
-                ], width=12)
-            ], className="mb-4"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("🔮 Visualização de Previsões vs Real"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Adiciona um dropdown para selecionar o modelo a ser visualizado
+                    dcc.Dropdown(
+                    id='model-selector',  # ID único para o dropdown
+                    options=[{'label': m, 'value': m}  # Gera opções a partir dos nomes dos modelos
+                         for m in self.models.keys()],
+                    value=self._default_model_name(),  # Define o modelo padrão selecionado
+                    className="mb-3"  # Adiciona margem inferior ao dropdown
+                    ),
+                    # Adiciona um componente gráfico para exibir as previsões
+                    dcc.Graph(
+                    id='predictions-plot',  # ID único para o gráfico
+                    # Define a figura inicial com o modelo padrão
+                    figure=self._build_predictions_figure(self._default_model_name())
+                    )
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para download de relatórios e exportação
+            # Inicia uma nova linha para a seção de download de relatórios e exportação
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("📥 Relatório e Exportação"),
-                        dbc.CardBody([
-                            html.Div([
-                                dbc.Button("📄 Gerar Relatório PDF",
-                                           id="generate-pdf",
-                                           color="primary",
-                                           className="me-2"),
-                                dbc.Button("💾 Exportar Resultados CSV",
-                                           id="export-csv",
-                                           color="success",
-                                           className="me-2"),
-                                dbc.Button("🤖 Salvar Melhor Modelo",
-                                           id="save-model",
-                                           color="warning"),
-                            ], className="d-flex justify-content-center"),
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("📥 Relatório e Exportação"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Cria um contêiner flexível para os botões de download, centralizados
+                    html.Div([
+                    # Botão para gerar relatório PDF
+                    dbc.Button("📄 Gerar Relatório PDF",
+                           id="generate-pdf",  # ID único para o botão
+                           color="primary",  # Cor primária do Bootstrap
+                           className="me-2"),  # Margem à direita
+                    # Botão para exportar resultados em CSV
+                    dbc.Button("💾 Exportar Resultados CSV",
+                           id="export-csv",  # ID único para o botão
+                           color="success",  # Cor de sucesso do Bootstrap
+                           className="me-2"),  # Margem à direita
+                    # Botão para salvar o melhor modelo
+                    dbc.Button("🤖 Salvar Melhor Modelo",
+                           id="save-model",  # ID único para o botão
+                           color="warning"),  # Cor de aviso do Bootstrap
+                    ], className="d-flex justify-content-center"),  # Classes para layout flexível e centralização
 
-                            # Div para armazenar os links de download
-                            html.Div(id='pdf-download', style={'display': 'none'}),
-                            html.Div(id='csv-download', style={'display': 'none'}),
-                            html.Div(id='model-download', style={'display': 'none'}),
+                    # Div oculta para armazenar o link de download do PDF (será populado por callback)
+                    html.Div(id='pdf-download', style={'display': 'none'}),
+                    # Div oculta para armazenar o link de download do CSV (será populado por callback)
+                    html.Div(id='csv-download', style={'display': 'none'}),
+                    # Div oculta para armazenar o link de download do modelo (será populado por callback)
+                    html.Div(id='model-download', style={'display': 'none'}),
 
-                            # Barra de progresso
-                            dbc.Progress(id="progress-bar", value=0,
-                                         striped=True, animated=True,
-                                         className="mt-3"),
+                    # Barra de progresso para indicar o status das operações
+                    dbc.Progress(id="progress-bar", value=0,  # ID e valor inicial (0%)
+                         striped=True, animated=True,  # Estilos visuais
+                         className="mt-3"),  # Margem superior
 
-                            # Mensagem de status
-                            html.Div(id="status-message",
-                                     className="mt-2 text-center")
-                        ])
-                    ])
-                ], width=12)
-            ], className="mb-4"),
+                    # Div para exibir mensagens de status ao usuário
+                    html.Div(id="status-message",
+                         className="mt-2 text-center")  # Margem superior e centralização
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ], className="mb-4"),  # Adiciona margem inferior à linha
 
-            # Linha para tabela detalhada de resultados
+            # Inicia uma nova linha para a tabela detalhada de resultados
             dbc.Row([
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardHeader("📋 Tabela Detalhada de Resultados"),
-                        dbc.CardBody([
-                            html.Div(
-                                id='results-table',
-                                children=self._build_results_table()
-                            )
-                        ])
-                    ])
-                ], width=12)
-            ])
-        ], fluid=True)
+            # Inicia uma coluna que ocupa toda a largura (12 de 12 unidades)
+            dbc.Col([
+                # Cria um componente Card do Bootstrap
+                dbc.Card([
+                # Define o cabeçalho do card
+                dbc.CardHeader("📋 Tabela Detalhada de Resultados"),
+                # Define o corpo do card
+                dbc.CardBody([
+                    # Div que conterá a tabela de resultados (será construída por um método interno)
+                    html.Div(
+                    id='results-table',  # ID único para a div
+                    children=self._build_results_table()  # Conteúdo inicial da tabela
+                    )
+                ])
+                ])
+            ], width=12)  # A coluna ocupa 12 unidades de largura
+            ]) # Nenhuma margem inferior para a última linha do layout
+        ], fluid=True) # O container ocupa toda a largura disponível (fluido)
 
     # Método para configurar os callbacks do dashboard
     def setup_callbacks(self):
