@@ -1066,12 +1066,13 @@ class AdvancedDashboard:
             return self._build_metrics_comparison_figure(selected_metric)
 
         # Callback para atualizar o gráfico de previsões
-        @self.app.callback(
-            Output('predictions-plot', 'figure'),
-            Input('model-selector', 'value')
+        @self.app.callback(  # Decorador que registra a função 'update_predictions_plot' como um callback Dash
+            Output('predictions-plot', 'figure'),  # Define o componente de saída: a propriedade 'figure' do gráfico com ID 'predictions-plot'
+            Input('model-selector', 'value')  # Define o componente de entrada: a propriedade 'value' do dropdown com ID 'model-selector'
         )
-        def update_predictions_plot(selected_model):
-            return self._build_predictions_figure(selected_model)
+        def update_predictions_plot(selected_model):  # Define a função de callback que será executada quando o valor do 'model-selector' mudar
+            # A função recebe o 'value' do 'model-selector' como argumento 'selected_model'
+            return self._build_predictions_figure(selected_model)  # Chama um método interno para construir o gráfico de previsões com base no modelo selecionado e retorna a figura
 
         # Registra um callback para o aplicativo Dash
         @self.app.callback(
