@@ -1073,17 +1073,20 @@ class AdvancedDashboard:
         def update_predictions_plot(selected_model):
             return self._build_predictions_figure(selected_model)
 
-        # Callback para manipular downloads e atualização de status
+        # Registra um callback para o aplicativo Dash
         @self.app.callback(
-            [Output('results-table', 'children'),
-             Output('pdf-download', 'children'),
-             Output('csv-download', 'children'),
-             Output('model-download', 'children'),
-             Output('progress-bar', 'value'),
-             Output('status-message', 'children')],
-            [Input('generate-pdf', 'n_clicks'),
-             Input('export-csv', 'n_clicks'),
-             Input('save-model', 'n_clicks')],
+            # Define as saídas que serão atualizadas por este callback
+            [Output('results-table', 'children'),    # O conteúdo da tabela de resultados
+             Output('pdf-download', 'children'),     # O link de download para PDF
+             Output('csv-download', 'children'),     # O link de download para CSV
+             Output('model-download', 'children'),   # O link de download para o modelo
+             Output('progress-bar', 'value'),        # O valor da barra de progresso
+             Output('status-message', 'children')],  # A mensagem de status exibida ao usuário
+            # Define as entradas que acionarão este callback
+            [Input('generate-pdf', 'n_clicks'),      # O número de cliques no botão 'Gerar Relatório PDF'
+             Input('export-csv', 'n_clicks'),        # O número de cliques no botão 'Exportar Resultados CSV'
+             Input('save-model', 'n_clicks')],       # O número de cliques no botão 'Salvar Melhor Modelo'
+            # Impede que o callback seja acionado na inicialização da aplicação
             prevent_initial_call=True
         )
         def handle_downloads(pdf_clicks, csv_clicks, model_clicks):
@@ -1108,120 +1111,124 @@ class AdvancedDashboard:
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
             # Gera o relatório em PDF
-            if button_id == 'generate-pdf':
-                try:
-                    report_lines = self._generate_report_lines()
-                    pdf_bytes = self._generate_simple_pdf(report_lines)
+            if button_id == 'generate-pdf':  # Verifica se o botão 'generate-pdf' foi clicado
+                try:  # Inicia um bloco try-except para tratamento de erros durante a geração do PDF
+                    report_lines = self._generate_report_lines()  # Gera as linhas de texto para o relatório
+                    pdf_bytes = self._generate_simple_pdf(report_lines)  # Gera o conteúdo do PDF em bytes a partir das linhas do relatório
 
-                    download_link = self._build_download_link(
-                        label="📥 Baixar Relatório PDF",
-                        link_id="pdf-download-link",
-                        mime_type="application/pdf",
-                        filename="relatorio_ml.pdf",
-                        content_bytes=pdf_bytes
+                    download_link = self._build_download_link(  # Cria um link de download para o arquivo PDF
+                        label="📥 Baixar Relatório PDF",  # Texto exibido no botão de download
+                        link_id="pdf-download-link",  # ID único para o link de download
+                        mime_type="application/pdf",  # Tipo MIME para arquivo PDF
+                        filename="relatorio_ml.pdf",  # Nome do arquivo a ser baixado
+                        content_bytes=pdf_bytes  # Conteúdo do arquivo em bytes (o PDF)
                     )
 
-                    return (
-                        dash.no_update,
-                        download_link,
-                        dash.no_update,
-                        dash.no_update,
-                        100,
-                        "✅ PDF gerado com sucesso!"
+                    return (  # Retorna para o callback com o link de download e uma mensagem de sucesso
+                        dash.no_update,  # Não atualiza a tabela de resultados
+                        download_link,  # Atualiza o link de download de PDF
+                        dash.no_update,  # Não atualiza o link de download de CSV
+                        dash.no_update,  # Não atualiza o link de download do modelo
+                        100,  # Define o valor da barra de progresso como 100 (concluído)
+                        "✅ PDF gerado com sucesso!"  # Exibe a mensagem de sucesso
                     )
-                except Exception as exc:
-                    return (
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        0,
-                        f"❌ Erro ao gerar PDF: {str(exc)}"
+                except Exception as exc:  # Captura qualquer exceção que ocorra durante o processo
+                    return (  # Retorna para o callback com uma mensagem de erro
+                        dash.no_update,  # Não atualiza a tabela de resultados
+                        dash.no_update,  # Não atualiza o link de download de PDF
+                        dash.no_update,  # Não atualiza o link de download de CSV
+                        dash.no_update,  # Não atualiza o link de download do modelo
+                        0,  # Define o valor da barra de progresso como 0
+                        f"❌ Erro ao gerar PDF: {str(exc)}"  # Exibe a mensagem de erro formatada
                     )
 
             # Exporta os resultados em CSV
-            if button_id == 'export-csv':
-                try:
-                    rows = []
+            if button_id == 'export-csv':  # Verifica se o botão 'export-csv' foi clicado
+                try:  # Inicia um bloco try-except para tratamento de erros durante a exportação
+                    rows = []  # Inicializa uma lista vazia para armazenar as linhas de dados do CSV
 
+                    # Ordena os resultados dos modelos com base na métrica principal, do melhor para o pior
                     sorted_results = sorted(
-                        self.results.items(),
-                        key=lambda item: self.get_primary_metric(item[1]),
-                        reverse=True
+                        self.results.items(),  # Itera sobre os itens do dicionário de resultados
+                        key=lambda item: self.get_primary_metric(item[1]),  # Usa a métrica principal para ordenação
+                        reverse=True  # Ordena em ordem decrescente (melhor primeiro)
                     )
 
+                    # Itera sobre os resultados ordenados para construir cada linha do CSV
                     for rank, (model_name, metrics) in enumerate(sorted_results, start=1):
-                        row = {
-                            "rank": rank,
-                            "model": model_name,
-                            "primary_metric": self.get_primary_metric(metrics),
+                        row = {  # Cria um dicionário para a linha atual
+                            "rank": rank,  # Adiciona a posição no ranking
+                            "model": model_name,  # Adiciona o nome do modelo
+                            "primary_metric": self.get_primary_metric(metrics),  # Adiciona a métrica principal
                         }
 
-                        if isinstance(metrics, dict):
-                            for key, value in metrics.items():
-                                if self._is_numeric(value):
-                                    row[key] = float(value)
+                        if isinstance(metrics, dict):  # Verifica se as métricas são um dicionário
+                            for key, value in metrics.items():  # Itera sobre cada métrica do modelo
+                                if self._is_numeric(value):  # Verifica se o valor da métrica é numérico
+                                    row[key] = float(value)  # Adiciona a métrica numérica à linha
 
-                        rows.append(row)
+                        rows.append(row)  # Adiciona a linha (dicionário) à lista de linhas
 
-                    results_df = pd.DataFrame(rows)
+                    results_df = pd.DataFrame(rows)  # Converte a lista de dicionários em um DataFrame do pandas
+                    # Converte o DataFrame para CSV como string e depois para bytes, ignorando o índice
                     csv_bytes = results_df.to_csv(index=False).encode("utf-8")
 
+                    # Cria um link de download para o arquivo CSV
                     download_link = self._build_download_link(
-                        label="💾 Baixar CSV",
-                        link_id="csv-download-link",
-                        mime_type="text/csv",
-                        filename="resultados_ml.csv",
-                        content_bytes=csv_bytes
+                        label="💾 Baixar CSV",  # Texto exibido no botão de download
+                        link_id="csv-download-link",  # ID único para o link de download
+                        mime_type="text/csv",  # Tipo MIME para arquivo CSV
+                        filename="resultados_ml.csv",  # Nome do arquivo a ser baixado
+                        content_bytes=csv_bytes  # Conteúdo do arquivo em bytes (o CSV)
                     )
 
-                    return (
-                        dash.no_update,
-                        dash.no_update,
-                        download_link,
-                        dash.no_update,
-                        100,
-                        "✅ CSV exportado com sucesso!"
+                    return (  # Retorna para o callback com o link de download e uma mensagem de sucesso
+                        dash.no_update,  # Não atualiza a tabela de resultados
+                        dash.no_update,  # Não atualiza o link de download de PDF
+                        download_link,  # Atualiza o link de download de CSV
+                        dash.no_update,  # Não atualiza o link de download do modelo
+                        100,  # Define o valor da barra de progresso como 100 (concluído)
+                        "✅ CSV exportado com sucesso!"  # Exibe a mensagem de sucesso
                     )
-                except Exception as exc:
-                    return (
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        0,
-                        f"❌ Erro ao exportar CSV: {str(exc)}"
+                except Exception as exc:  # Captura qualquer exceção que ocorra durante o processo
+                    return (  # Retorna para o callback com uma mensagem de erro
+                        dash.no_update,  # Não atualiza a tabela de resultados
+                        dash.no_update,  # Não atualiza o link de download de PDF
+                        dash.no_update,  # Não atualiza o link de download de CSV
+                        dash.no_update,  # Não atualiza o link de download do modelo
+                        0,  # Define o valor da barra de progresso como 0
+                        f"❌ Erro ao exportar CSV: {str(exc)}"  # Exibe a mensagem de erro formatada
                     )
 
             # Serializa e exporta o melhor modelo
-            if button_id == 'save-model':
-                model_bytes, message = self._serialize_best_model()
+            if button_id == 'save-model':  # Verifica se o botão 'save-model' foi clicado
+                model_bytes, message = self._serialize_best_model()  # Tenta serializar o melhor modelo e obtém os bytes e uma mensagem de status
 
-                if model_bytes is None:
-                    return (
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        dash.no_update,
-                        0,
-                        f"❌ {message}"
+                if model_bytes is None:  # Se a serialização falhou (model_bytes é None)
+                    return (  # Retorna para o callback com uma mensagem de erro
+                        dash.no_update,  # Não atualiza a tabela de resultados
+                        dash.no_update,  # Não atualiza o link de download de PDF
+                        dash.no_update,  # Não atualiza o link de download de CSV
+                        dash.no_update,  # Não atualiza o link de download do modelo
+                        0,  # Define o valor da barra de progresso como 0
+                        f"❌ {message}"  # Exibe a mensagem de erro formatada
                     )
 
-                download_link = self._build_download_link(
-                    label="🤖 Baixar Modelo",
-                    link_id="model-download-link",
-                    mime_type="application/octet-stream",
-                    filename="melhor_modelo.pkl",
-                    content_bytes=model_bytes
+                download_link = self._build_download_link(  # Se a serialização foi bem-sucedida, cria um link de download
+                    label="🤖 Baixar Modelo",  # Texto exibido no botão de download
+                    link_id="model-download-link",  # ID único para o link de download
+                    mime_type="application/octet-stream",  # Tipo MIME para arquivo binário genérico
+                    filename="melhor_modelo.pkl",  # Nome do arquivo a ser baixado
+                    content_bytes=model_bytes  # Conteúdo do arquivo em bytes (o modelo serializado)
                 )
 
-                return (
-                    dash.no_update,
-                    dash.no_update,
-                    dash.no_update,
-                    download_link,
-                    100,
-                    f"✅ {message}"
+                return (  # Retorna para o callback com o link de download e uma mensagem de sucesso
+                    dash.no_update,  # Não atualiza a tabela de resultados
+                    dash.no_update,  # Não atualiza o link de download de PDF
+                    dash.no_update,  # Não atualiza o link de download de CSV
+                    download_link,  # Atualiza o link de download do modelo
+                    100,  # Define o valor da barra de progresso como 100 (concluído)
+                    f"✅ {message}"  # Exibe a mensagem de sucesso formatada
                 )
 
             # Retorna padrão se nenhuma ação válida for executada
