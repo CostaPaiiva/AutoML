@@ -261,8 +261,11 @@ class AdvancedDashboard:
             }
 
             if isinstance(metrics, dict):
+                # Itera sobre cada par chave-valor (nome da métrica e seu valor) no dicionário 'metrics'
                 for key, value in metrics.items():
+                    # Verifica se o valor da métrica é numérico usando o método auxiliar _is_numeric
                     if self._is_numeric(value):
+                        # Se for numérico, converte para float, arredonda para 6 casas decimais e adiciona à linha 'row' com a chave da métrica
                         row[key] = round(float(value), 6)
 
             rows.append(row)
@@ -315,10 +318,10 @@ class AdvancedDashboard:
             )
 
         # Ordena os resultados dos modelos com base na métrica principal
-        sorted_results = sorted(
-            self.results.items(),
-            key=lambda item: self.get_primary_metric(item[1]),
-            reverse=True
+        sorted_results = sorted( # Inicia a ordenação dos resultados
+            self.results.items(), # Pega os itens do dicionário de resultados (nome do modelo, métricas)
+            key=lambda item: self.get_primary_metric(item[1]), # Usa a métrica principal de cada modelo como chave para ordenação
+            reverse=True # Ordena em ordem decrescente (do melhor para o pior)
         )
 
         # Extrai nomes e pontuações
@@ -401,7 +404,9 @@ class AdvancedDashboard:
             values = []
 
             for model_name in models:
+                # Obtém o valor da métrica para o modelo atual; usa 0 como padrão se a métrica não existir
                 value = self.results[model_name].get(metric_key, 0)
+                # Converte o valor para float se for numérico válido, caso contrário, define como 0.0
                 value = float(value) if self._is_numeric(value) else 0.0
 
                 # Inverte métricas de erro para visualização
@@ -454,7 +459,9 @@ class AdvancedDashboard:
             values = []
 
             for model_name in models:
+                # Obtém o valor da métrica para o modelo atual; usa 0 como padrão se a métrica não existir
                 value = self.results[model_name].get(metric, 0)
+                # Converte o valor para float se for numérico válido, caso contrário, define como 0.0
                 value = float(value) if self._is_numeric(value) else 0.0
 
                 # Inverte métricas de erro
@@ -481,125 +488,125 @@ class AdvancedDashboard:
     # Cria o heatmap com todas as métricas
     def _build_all_metrics_heatmap(self):
         """Cria heatmap com todas as métricas numéricas"""
-        metric_names = self._get_numeric_metric_names()
+        metric_names = self._get_numeric_metric_names() # Obtém uma lista de nomes de métricas numéricas disponíveis
 
         # Retorna figura vazia se não houver métricas
-        if not metric_names:
-            return self._build_empty_figure(
-                "Comparação de Todas as Métricas",
-                "Nenhuma métrica numérica disponível."
+        if not metric_names: # Verifica se a lista de nomes de métricas está vazia
+            return self._build_empty_figure( # Retorna uma figura Plotly vazia com uma mensagem de erro
+                "Comparação de Todas as Métricas", # Título da figura vazia
+                "Nenhuma métrica numérica disponível." # Mensagem exibida na figura vazia
             )
 
-        models = list(self.results.keys())
-        z = []
+        models = list(self.results.keys()) # Obtém uma lista dos nomes de todos os modelos nos resultados
+        z = [] # Inicializa uma lista vazia que armazenará os dados para o heatmap (matriz Z)
 
         # Monta a matriz do heatmap
-        for model_name in models:
-            row = []
+        for model_name in models: # Itera sobre cada nome de modelo
+            row = [] # Inicializa uma lista vazia para a linha de métricas do modelo atual
 
-            for metric in metric_names:
-                value = self.results[model_name].get(metric, 0)
-                value = float(value) if self._is_numeric(value) else 0.0
+            for metric in metric_names: # Itera sobre cada métrica numérica
+                value = self.results[model_name].get(metric, 0) # Obtém o valor da métrica para o modelo atual, ou 0 se não existir
+                value = float(value) if self._is_numeric(value) else 0.0 # Converte o valor para float se for numérico, caso contrário, usa 0.0
 
-                # Inverte métricas de erro
-                if metric in {"rmse", "mae", "mse"}:
-                    value = -value
+                # Inverte métricas de erro para que valores menores indiquem melhor performance visualmente
+                if metric in {"rmse", "mae", "mse"}: # Verifica se a métrica é uma das métricas de erro
+                    value = -value # Inverte o sinal do valor da métrica
 
-                row.append(value)
+                row.append(value) # Adiciona o valor (potencialmente invertido) à linha atual
 
-            z.append(row)
+            z.append(row) # Adiciona a linha completa de métricas do modelo à matriz Z
 
         # Cria o heatmap
-        fig = go.Figure(
-            data=go.Heatmap(
-                z=z,
-                x=metric_names,
-                y=models,
-                colorscale='Viridis',
-                colorbar=dict(title="Valor"),
-                hoverongaps=False,
+        fig = go.Figure( # Cria um novo objeto de figura Plotly
+            data=go.Heatmap( # Adiciona um traço do tipo Heatmap à figura
+                z=z, # Define os dados da matriz Z (valores do heatmap)
+                x=metric_names, # Define os rótulos do eixo X (nomes das métricas)
+                y=models, # Define os rótulos do eixo Y (nomes dos modelos)
+                colorscale='Viridis', # Define a escala de cores para o heatmap
+                colorbar=dict(title="Valor"), # Configura a barra de cores com o título "Valor"
+                hoverongaps=False, # Impede que o hoverbox apareça em células sem dados
             )
         )
 
         # Configura o layout
-        fig.update_layout(
-            title="Comparação de Todas as Métricas",
-            template="plotly_dark",
-            height=max(420, 60 * len(models)),
-            margin=dict(l=40, r=20, t=60, b=60),
+        fig.update_layout( # Atualiza as configurações de layout da figura
+            title="Comparação de Todas as Métricas", # Define o título principal do gráfico
+            template="plotly_dark", # Aplica o tema escuro do Plotly
+            height=max(420, 60 * len(models)), # Define a altura do gráfico, ajustando dinamicamente com base no número de modelos
+            margin=dict(l=40, r=20, t=60, b=60), # Define as margens do gráfico
         )
 
-        return fig
+        return fig # Retorna o objeto de figura Plotly configurado
 
-    # Escolhe qual gráfico de comparação de métricas deve ser exibido
     def _build_metrics_comparison_figure(self, selected_metric):
         """Retorna o gráfico correto conforme a opção escolhida"""
-        if selected_metric == 'main':
-            return self._build_main_metrics_figure()
-        if selected_metric == 'detailed':
-            return self._build_detailed_metrics_figure()
-        return self._build_all_metrics_heatmap()
+        if selected_metric == 'main': # Verifica se a métrica selecionada é 'main' (métricas principais)
+            return self._build_main_metrics_figure() # Retorna a figura do gráfico de métricas principais
+        if selected_metric == 'detailed': # Verifica se a métrica selecionada é 'detailed' (métricas detalhadas)
+            return self._build_detailed_metrics_figure() # Retorna a figura do gráfico de métricas detalhadas
+        return self._build_all_metrics_heatmap() # Se nenhuma das anteriores, retorna a figura do heatmap de todas as métricas
 
     # Cria o gráfico de importância das features
     def _build_feature_importance_figure(self):
         """Cria o gráfico de feature importance para os top 5 modelos"""
         # Retorna figura vazia se não houver feature importance
-        if not self.feature_importance:
-            return self._build_empty_figure(
-                "Feature Importance - Top 5 Modelos",
-                "Feature importance não disponível."
+        if not self.feature_importance: # Verifica se o dicionário de feature importance está vazio
+            return self._build_empty_figure( # Retorna uma figura Plotly vazia com uma mensagem de erro
+                "Feature Importance - Top 5 Modelos", # Título da figura vazia
+                "Feature importance não disponível." # Mensagem exibida na figura vazia
             )
+
 
         models_with_fi = []
 
         # Filtra modelos que possuem feature importance
         for model_name, metrics in self.results.items():
+            # Verifica se o modelo atual possui dados de feature importance
             if model_name in self.feature_importance:
+                # Adiciona o nome do modelo e sua métrica principal à lista de modelos com feature importance
                 models_with_fi.append((model_name, self.get_primary_metric(metrics)))
 
         # Retorna figura vazia se nenhum modelo tiver feature importance
         if not models_with_fi:
-            return self._build_empty_figure(
-                "Feature Importance - Top 5 Modelos",
-                "Nenhum modelo com feature importance encontrada."
+            return self._build_empty_figure( # Retorna uma figura vazia se nenhum modelo tiver feature importance
+                "Feature Importance - Top 5 Modelos", # Título da figura vazia
+                "Nenhum modelo com feature importance encontrada." # Mensagem a ser exibida na figura vazia
             )
 
-        # Ordena os modelos pela métrica principal
-        models_with_fi.sort(key=lambda item: item[1], reverse=True)
-        top_models = [name for name, _ in models_with_fi[:5]]
+        models_with_fi.sort(key=lambda item: item[1], reverse=True) # Ordena os modelos com feature importance pela métrica principal (do melhor para o pior)
+        top_models = [name for name, _ in models_with_fi[:5]] # Seleciona os nomes dos 5 melhores modelos para exibir
 
-        # Cria subplots para os top modelos
-        fig = make_subplots(
-            rows=1,
-            cols=len(top_models),
-            subplot_titles=top_models,
-            shared_yaxes=False
+        fig = make_subplots( # Cria um objeto de subplots do Plotly para múltiplos gráficos
+            rows=1, # Define 1 linha de subplots
+            cols=len(top_models), # Define o número de colunas como o número de top modelos
+            subplot_titles=top_models, # Define os títulos dos subplots como os nomes dos top modelos
+            shared_yaxes=False # Define que os eixos Y não serão compartilhados entre os subplots
         )
 
-        # Adiciona as barras de importância para cada modelo
-        for col_idx, model_name in enumerate(top_models, start=1):
-            feature_names, importances = self._normalize_feature_importance(model_name)
+        for col_idx, model_name in enumerate(top_models, start=1): # Itera sobre os top modelos, com um índice de coluna
+            feature_names, importances = self._normalize_feature_importance(model_name) # Normaliza e obtém os nomes das features e suas importâncias para o modelo atual
 
-            if not feature_names or not importances:
-                continue
+            if not feature_names or not importances: # Verifica se há nomes de features ou importâncias válidos
+                continue # Pula para o próximo modelo se não houver dados
 
-            importances = np.asarray(importances, dtype=float)
-            top_idx = np.argsort(importances)[-10:]
+            importances = np.asarray(importances, dtype=float) # Converte as importâncias para um array NumPy de floats
+            top_idx = np.argsort(importances)[-10:] # Obtém os índices das 10 features mais importantes (com base nos valores)
 
-            top_features = [feature_names[i] for i in top_idx]
-            top_values = importances[top_idx]
+            top_features = [feature_names[i] for i in top_idx] # Seleciona os nomes das 10 features mais importantes
+            top_values = importances[top_idx] # Seleciona os valores das importâncias das 10 features mais importantes
 
-            fig.add_trace(
-                go.Bar(
-                    x=top_values,
-                    y=top_features,
-                    orientation='h',
-                    name=model_name,
-                    hovertemplate="Feature: %{y}<br>Importância: %{x:.4f}<extra></extra>",
+            fig.add_trace( # Adiciona um traço (gráfico de barras) ao subplot atual
+                go.Bar( # Define o tipo de traço como barra
+                    x=top_values, # Valores das barras no eixo X (importância)
+                    y=top_features, # Nomes das features no eixo Y
+                    orientation='h', # Orientação horizontal das barras
+                    name=model_name, # Nome do modelo para a legenda (se houvesse)
+                    hovertemplate="Feature: %{y}<br>Importância: %{x:.4f}<extra></extra>", # Template do texto ao passar o mouse
                 ),
-                row=1,
-                col=col_idx
+                row=1, # Adiciona o traço na primeira linha
+                col=col_idx # Adiciona o traço na coluna correspondente ao índice do modelo
             )
+
 
         # Configura o layout
         fig.update_layout(
