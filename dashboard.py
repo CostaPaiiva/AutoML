@@ -108,13 +108,23 @@ class AdvancedDashboard:
 
         # Para regressão, prioriza R²; se não existir, usa erro invertido
         if problem_type == "Regressão":
+            # Verifica se a métrica "r2" existe e é numérica
             if self._is_numeric(metrics.get("r2")):
+                # Se sim, retorna o valor de R² como float
                 return float(metrics["r2"])
 
+            # Itera sobre as métricas de erro comuns para regressão (RMSE, MAE, MSE)
             for key in ("rmse", "mae", "mse"):
+                # Obtém o valor da métrica atual
                 value = metrics.get(key)
+                # Verifica se o valor da métrica existe e é numérico
                 if self._is_numeric(value):
+                    # Se sim, retorna o valor negativo da métrica de erro como float.
+                    # Isso é feito para que métricas de erro (onde menor é melhor)
+                    # possam ser comparadas da mesma forma que métricas de acerto (onde maior é melhor)
+                    # ao buscar o "melhor" modelo usando `max()`.
                     return -float(value)
+
 
         # Retorna 0 se nenhuma métrica principal for encontrada
         return 0.0
@@ -126,9 +136,12 @@ class AdvancedDashboard:
         if not self.results:
             return None, None
 
-        # Seleciona o melhor modelo com base na métrica principal
+        # Inicializa variáveis para armazenar o nome do melhor modelo e suas métricas.
+        # Usa a função `max` para encontrar o item (modelo, métricas) com a maior métrica principal.
         best_name, best_metrics = max(
+            # Itera sobre os pares (nome do modelo, dicionário de métricas) dos resultados.
             self.results.items(),
+            # Define a chave de comparação para a função `max`: a métrica principal de cada modelo.
             key=lambda item: self.get_primary_metric(item[1])
         )
 
@@ -143,37 +156,49 @@ class AdvancedDashboard:
             "r2", "rmse", "mae", "mse"
         ]
 
+        # Define uma função interna 'sort_key' que será usada para ordenar os nomes das métricas.
         def sort_key(name):
+            # Verifica se o nome da métrica atual está na lista de prioridade predefinida.
             if name in priority:
+            # Se estiver na lista de prioridade, retorna uma tupla (0, índice) para dar prioridade a essas métricas
+            # e ordená-las pela sua posição na lista 'priority'.
                 return (0, priority.index(name))
+            # Se a métrica não estiver na lista de prioridade, retorna uma tupla (1, nome)
+            # para que essas métricas venham depois das prioritárias e sejam ordenadas alfabeticamente.
             return (1, name)
 
+        # Retorna a lista de nomes de métricas ordenadas usando a função 'sort_key' definida acima.
         return sorted(metric_names, key=sort_key)
 
     # Obtém a lista de métricas numéricas disponíveis
     def _get_numeric_metric_names(self):
         """Retorna as métricas numéricas encontradas nos resultados"""
-        metric_names = set()
+        metric_names = set() # Inicializa um conjunto vazio para armazenar os nomes das métricas numéricas únicas.
 
-        for metrics in self.results.values():
-            if not isinstance(metrics, dict):
-                continue
+        for metrics in self.results.values(): # Itera sobre os dicionários de métricas de cada modelo nos resultados.
+            if not isinstance(metrics, dict): # Verifica se o item 'metrics' é realmente um dicionário.
+                continue # Se não for, pula para o próximo item.
 
-            for key, value in metrics.items():
-                if key == "confusion_matrix":
-                    continue
-                if self._is_numeric(value):
-                    metric_names.add(key)
+            for key, value in metrics.items(): # Itera sobre cada par chave-valor (nome da métrica, valor da métrica) dentro do dicionário de métricas do modelo.
+                if key == "confusion_matrix": # Verifica se a chave da métrica é "confusion_matrix".
+                    continue # Se for, pula para a próxima métrica, pois a matriz de confusão não é uma métrica numérica simples.
+                if self._is_numeric(value): # Chama o método auxiliar '_is_numeric' para verificar se o valor da métrica é numérico.
+                    metric_names.add(key) # Se o valor for numérico, adiciona o nome da métrica ao conjunto 'metric_names'.
 
-        return self._ordered_metric_names(metric_names)
+        return self._ordered_metric_names(metric_names) # Retorna a lista de nomes de métricas numéricas, ordenada de forma consistente usando o método auxiliar '_ordered_metric_names'.
 
     # Formata métricas para exibição
     def _format_metric(self, value):
         """Formata o valor da métrica para exibição"""
+        # Verifica se o valor é None.
         if value is None:
+            # Se for None, retorna "N/A" (Not Applicable).
             return "N/A"
+        # Verifica se o valor é numérico usando o método auxiliar _is_numeric.
         if self._is_numeric(value):
+            # Se for numérico, formata o valor como float com 4 casas decimais e retorna como string.
             return f"{float(value):.4f}"
+        # Se não for numérico e não for None, converte o valor para string e o retorna.
         return str(value)
 
     # Cria um gráfico vazio com mensagem central
@@ -225,8 +250,11 @@ class AdvancedDashboard:
 
         # Usa os nomes das colunas do X_test, se existirem
         if hasattr(self.X_test, 'columns'):
+            # Obtém os nomes das colunas de X_test e as converte para string
             columns = list(map(str, self.X_test.columns))
+            # Verifica se o número de nomes de colunas corresponde ao número de valores de importância
             if len(columns) == len(values):
+                # Se sim, retorna os nomes das colunas e os valores de importância convertidos para float
                 return columns, [float(v) for v in values]
 
         # Caso contrário, cria nomes genéricos de features
@@ -244,11 +272,11 @@ class AdvancedDashboard:
         # Obtém o melhor modelo
         best_model_name, _ = self._get_best_model_info()
 
-        # Ordena os modelos pela métrica principal
-        sorted_results = sorted(
-            self.results.items(),
-            key=lambda item: self.get_primary_metric(item[1]),
-            reverse=True
+        # Ordena os resultados dos modelos com base na métrica principal
+        sorted_results = sorted( # Inicia a ordenação dos resultados
+            self.results.items(), # Pega os itens do dicionário de resultados (nome do modelo, métricas)
+            key=lambda item: self.get_primary_metric(item[1]), # Usa a métrica principal de cada modelo como chave para ordenação
+            reverse=True # Ordena em ordem decrescente (do melhor para o pior)
         )
 
         # Monta cada linha da tabela
@@ -326,6 +354,7 @@ class AdvancedDashboard:
 
         # Extrai nomes e pontuações
         model_names = [item[0] for item in sorted_results]
+        # Extrai as pontuações da métrica principal de cada modelo na lista ordenada de resultados
         scores = [self.get_primary_metric(item[1]) for item in sorted_results]
 
         # Cria o gráfico de barras horizontal
