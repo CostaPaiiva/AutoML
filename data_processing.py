@@ -103,97 +103,172 @@ class AdvancedDataProcessor:
         return data_cleaned
 
     def feature_engineering(self, data):
+        # Define um método para realizar engenharia de features no DataFrame.
         """Engenharia de features avançada"""
+        # Imprime uma mensagem indicando o início do processo de engenharia de features.
         print("Aplicando engenharia de features...")
 
+        # Cria uma cópia do DataFrame de entrada para evitar modificar o original.
         data = data.copy()
 
+        # Seleciona todas as colunas numéricas no DataFrame.
         numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+        # Verifica se a coluna alvo foi definida e se ela está entre as colunas numéricas.
         if self.target_column in numeric_cols:
+            # Remove a coluna alvo da lista de colunas numéricas para não ser usada na engenharia de features.
             numeric_cols.remove(self.target_column)
 
+        # Limita o número de colunas numéricas a serem consideradas para engenharia de features a um máximo de 5.
         numeric_cols = numeric_cols[:5]
 
+        # Verifica se há pelo menos duas colunas numéricas para criar features de interação.
         if len(numeric_cols) >= 2:
+            # Itera sobre um subconjunto das colunas numéricas (até 3 primeiras).
             for i in range(min(len(numeric_cols), 3)):
+                # Itera sobre as colunas restantes para formar pares (até a 4ª coluna).
                 for j in range(i + 1, min(len(numeric_cols), 4)):
+                    # Obtém os nomes das duas colunas para interação.
                     col1, col2 = numeric_cols[i], numeric_cols[j]
+                    # Cria uma nova feature que é o produto das duas colunas.
                     data[f'{col1}_x_{col2}'] = data[col1] * data[col2]
 
+                    # Cria uma máscara para identificar onde a segunda coluna não é zero, para evitar divisão por zero.
                     mask = data[col2] != 0
+                    # Cria uma nova feature que é a divisão da primeira pela segunda coluna, tratando a divisão por zero.
                     data[f'{col1}_div_{col2}'] = np.where(mask, data[col1] / data[col2], 0)
 
+        # Verifica se há mais de uma coluna numérica para calcular estatísticas agregadas.
         if len(numeric_cols) > 1:
+            # Cria uma nova feature que é a média de todas as colunas numéricas para cada linha.
             data['mean_features'] = data[numeric_cols].mean(axis=1)
+            # Cria uma nova feature que é o desvio padrão de todas as colunas numéricas para cada linha.
             data['std_features'] = data[numeric_cols].std(axis=1)
 
+        # Retorna o DataFrame com as novas features criadas.
         return data
 
     def handle_missing_values(self, data, strategy='simple'):
+        # Define um método para tratar valores faltantes no DataFrame.
         """Tratamento de valores faltantes - VERSÃO CORRIGIDA"""
+        # Imprime uma mensagem indicando o início do processo de tratamento de valores faltantes.
         print("Tratando valores faltantes...")
 
+        # Cria uma cópia do DataFrame de entrada para evitar modificar o original.
         data = data.copy()
 
+        # Verifica se a estratégia de tratamento de valores faltantes é 'simple'.
         if strategy == 'simple':
+            # Seleciona as colunas numéricas no DataFrame.
             numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+            # Seleciona as colunas categóricas (tipo 'object' ou 'category') no DataFrame.
             categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
+            # Itera sobre cada coluna numérica.
             for col in numeric_cols:
+                # Verifica se a coluna contém algum valor nulo.
                 if data[col].isnull().any():
+                    # Calcula a mediana dos valores na coluna.
                     median_value = data[col].median()
+                    # Preenche os valores nulos na coluna com a mediana calculada.
                     data[col] = data[col].fillna(median_value)
 
+            # Itera sobre cada coluna categórica.
             for col in categorical_cols:
+                # Verifica se a coluna contém algum valor nulo.
                 if data[col].isnull().any():
+                    # Calcula o valor mais frequente (moda) na coluna.
                     mode_value = data[col].mode()
+                    # Verifica se a moda não está vazia (ou seja, se há um valor mais frequente).
                     if not mode_value.empty:
+                        # Preenche os valores nulos na coluna com o primeiro valor da moda.
                         data[col] = data[col].fillna(mode_value.iloc[0])
+                    # Caso a moda esteja vazia (ex: todos NaN ou múltiplos modos sem um único dominante).
                     else:
+                        # Preenche os valores nulos com uma string vazia.
                         data[col] = data[col].fillna('')
 
+            # Retorna o DataFrame com os valores faltantes tratados pela estratégia 'simple'.
             return data
 
+        # Se a estratégia não for 'simple' (código existente assume alguma outra estratégia, como 'advanced' ou padrão).
         else:
+            # Seleciona as colunas numéricas no DataFrame.
             numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+            # Seleciona as colunas categóricas (tipo 'object' ou 'category') no DataFrame.
             categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
+            # Verifica se existem colunas numéricas para tratar.
             if numeric_cols:
+                # Extrai os valores das colunas numéricas em um array NumPy.
                 numeric_data = data[numeric_cols].values
+                # Instancia um SimpleImputer para preencher valores nulos com a média.
                 imputer_num = SimpleImputer(strategy='mean')
+                # Ajusta o imputer aos dados numéricos e os transforma, preenchendo os nulos.
                 numeric_data_imputed = imputer_num.fit_transform(numeric_data)
+                # Atribui os dados numéricos imputados de volta às colunas originais no DataFrame.
                 data[numeric_cols] = numeric_data_imputed
 
+            # Verifica se existem colunas categóricas para tratar.
             if categorical_cols:
+                # Itera sobre cada coluna categórica.
                 for col in categorical_cols:
+                    # Calcula o valor mais frequente (moda) na coluna.
                     mode_value = data[col].mode()
+                    # Verifica se a moda não está vazia.
                     if not mode_value.empty:
+                        # Preenche os valores nulos na coluna com o primeiro valor da moda.
                         data[col] = data[col].fillna(mode_value.iloc[0])
+                    # Caso a moda esteja vazia.
                     else:
+                        # Preenche os valores nulos com a string 'missing'.
                         data[col] = data[col].fillna('missing')
 
+            # Retorna o DataFrame com os valores faltantes tratados pela estratégia 'else'.
             return data
 
     def encode_categorical(self, data):
+        # Imprime uma mensagem indicando o início do processo de codificação.
         """Codificação avançada de variáveis categóricas - VERSÃO SIMPLIFICADA"""
+        # Imprime uma mensagem para o console, informando que a codificação de variáveis categóricas está começando.
         print("Codificando variáveis categóricas...")
 
+        # Cria uma cópia do DataFrame de entrada para evitar modificar o original.
         data = data.copy()
+        # Identifica todas as colunas no DataFrame que são do tipo 'object' (geralmente strings) ou 'category'.
+        # Essas são as colunas categóricas que precisarão ser codificadas.
         categorical_cols = data.select_dtypes(include=['object', 'category']).columns.tolist()
 
+        # Itera sobre cada coluna identificada como categórica.
         for col in categorical_cols:
+            # Verifica se a coluna atual não é a coluna alvo (target_column), pois a coluna alvo não deve ser codificada desta forma.
             if col != self.target_column:
+                # Calcula o número de valores únicos na coluna atual, incluindo valores NaN (valores faltantes).
                 nunique = data[col].nunique(dropna=False)
 
+                # Verifica se o número de valores únicos é menor ou igual a 10.
                 if nunique <= 10:
+                    # Se houver 10 ou menos valores únicos, aplica One-Hot Encoding.
+                    # Cria variáveis dummy para a coluna, convertendo categorias em colunas binárias.
+                    # 'prefix=col' adiciona o nome da coluna original como prefixo às novas colunas dummy.
+                    # 'drop_first=True' evita a multicolinearidade, removendo a primeira categoria de cada grupo.
                     dummies = pd.get_dummies(data[col], prefix=col, drop_first=True)
+                    # Concatena o DataFrame original (sem a coluna categórica original) com as novas colunas dummy.
                     data = pd.concat([data.drop(columns=[col]), dummies], axis=1)
+                # Se o número de valores únicos for maior que 10.
                 else:
+                    # Aplica Label Encoding para colunas com muitas categorias únicas (alta cardinalidade).
+                    # Instancia um objeto LabelEncoder.
                     le = LabelEncoder()
+                    # Preenche os valores NaN na coluna com a string 'missing' e converte a coluna para o tipo string.
+                    # Isso garante que o LabelEncoder possa processar todos os valores, incluindo os que eram NaN.
                     col_data = data[col].fillna('missing').astype(str)
+                    # Ajusta o LabelEncoder aos dados da coluna e os transforma em valores numéricos inteiros.
                     data[col] = le.fit_transform(col_data)
+                    # Armazena o LabelEncoder ajustado no dicionário 'encoders' da instância, usando o nome da coluna como chave.
+                    # Isso permite que o mesmo encoder seja usado para transformar novos dados posteriormente.
                     self.encoders[col] = le
 
+        # Retorna o DataFrame com as variáveis categóricas codificadas.
         return data
 
     def scale_features(self, data):
