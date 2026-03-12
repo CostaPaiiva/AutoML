@@ -1,3 +1,17 @@
+
+# Classe PDFReportGenerator: gera relatórios PDF de ML.
+# 1. Configura identidade visual (cores, logo, estilos).
+# 2. Cria capa com título, subtítulo e informações do dataset.
+# 3. Adiciona seção de informações gerais sobre modelos e problema.
+# 4. Gera resumo executivo destacando o melhor modelo.
+# 5. Mostra métricas detalhadas do modelo vencedor.
+# 6. Cria ranking completo dos modelos avaliados.
+# 7. Exibe métricas adicionais dos outros modelos.
+# 8. Inclui recomendações práticas e próximos passos.
+# 9. Adiciona rodapé com marca e informações finais.
+# 10. Método generate_report() monta todo o PDF e salva o arquivo.
+
+
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
     SimpleDocTemplate,
