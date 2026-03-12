@@ -197,149 +197,232 @@ class AdvancedDataProcessor:
         return data
 
     def scale_features(self, data):
+        # Define um método para normalizar e padronizar as features.
         """Normalização e padronização das features - VERSÃO SIMPLIFICADA"""
+        # Imprime uma mensagem indicando o início do processo de escalonamento.
         print("Escalando features...")
 
+        # Cria uma cópia do DataFrame de entrada para evitar modificar o original.
         data = data.copy()
+        # Seleciona todas as colunas numéricas no DataFrame e as lista.
         numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
 
+        # Verifica se a coluna alvo foi definida e se ela está entre as colunas numéricas.
         if self.target_column and self.target_column in numeric_cols:
+            # Remove a coluna alvo da lista de colunas numéricas para não ser escalada.
             numeric_cols.remove(self.target_column)
 
+        # Verifica se há colunas numéricas restantes para serem escaladas.
         if len(numeric_cols) > 0:
+            # Inicializa uma lista para armazenar as colunas que realmente serão escaladas.
             cols_to_scale = []
+            # Itera sobre cada coluna numérica.
             for col in numeric_cols:
+                # Verifica se o desvio padrão da coluna é maior que zero (para evitar divisão por zero no scaler).
                 if data[col].std() > 0:
+                    # Adiciona a coluna à lista de colunas a serem escaladas.
                     cols_to_scale.append(col)
 
+            # Verifica se há colunas válidas para serem escaladas.
             if cols_to_scale:
+                # Instancia um objeto StandardScaler.
                 scaler = StandardScaler()
+                # Ajusta o scaler aos dados das colunas selecionadas e os transforma.
                 data_scaled = scaler.fit_transform(data[cols_to_scale])
+                # Atribui os dados escalados de volta às colunas originais no DataFrame.
                 data[cols_to_scale] = data_scaled
+                # Armazena o scaler ajustado no dicionário 'scalers' da instância, usando a chave 'standard'.
                 self.scalers['standard'] = scaler
 
+        # Retorna o DataFrame com as features numéricas escaladas.
         return data
 
     def feature_selection(self, X, y, k='auto'):
         """Seleção avançada de features - VERSÃO SIMPLIFICADA"""
+        # Imprime uma mensagem indicando o início do processo de seleção de features.
         print("Selecionando melhores features...")
 
+        # Verifica se o parâmetro 'k' para o número de features a selecionar está definido como 'auto'.
         if k == 'auto':
+            # Se 'k' for 'auto', define 'k' como o mínimo entre 20 e o número total de colunas (features) em X.
             k = min(20, X.shape[1])
 
+        # Verifica se o número de features a selecionar ('k') é maior ou igual ao número total de features em X.
         if k >= X.shape[1]:
+            # Imprime uma mensagem informando que não há features suficientes para seleção e todas as features serão usadas.
             print(f"Não há features suficientes para seleção. Usando todas as {X.shape[1]} features.")
+            # Retorna o DataFrame X original sem alteração.
             return X
 
+        # Verifica se o tipo de problema detectado é 'classification'.
         if self.problem_type == 'classification':
+            # Se for classificação, inicializa um seletor SelectKBest usando f_classif como função de pontuação.
             selector = SelectKBest(score_func=f_classif, k=k)
+        # Caso contrário (se for regressão).
         else:
+            # Inicializa um seletor SelectKBest usando f_regression como função de pontuação.
             selector = SelectKBest(score_func=f_regression, k=k)
 
+        # Inicia um bloco try para lidar com possíveis erros durante a seleção de features.
         try:
+            # Aplica o seletor aos dados X e y para ajustar o modelo e transformar os dados, selecionando as melhores features.
             X_selected = selector.fit_transform(X, y)
+            # Armazena o seletor ajustado na instância da classe para uso posterior.
             self.feature_selector = selector
 
+            # Obtém os nomes das colunas (features) que foram selecionadas.
             selected_features = X.columns[selector.get_support()].tolist()
+            # Imprime o número de features selecionadas em relação ao total.
             print(f"Features selecionadas: {len(selected_features)}/{X.shape[1]}")
 
+            # Retorna um novo DataFrame contendo apenas as features selecionadas, mantendo os nomes das colunas e o índice original.
             return pd.DataFrame(X_selected, columns=selected_features, index=X.index)
+        # Captura qualquer exceção que ocorra durante o processo de seleção de features.
         except Exception:
+            # Imprime uma mensagem de erro indicando que a seleção de features falhou.
             print("Erro na seleção de features. Usando todas as features.")
+            # Retorna o DataFrame X original sem alteração em caso de erro.
             return X
 
     def process(self, data_path):
         """Pipeline completo de processamento - VERSÃO ROBUSTA"""
-        print("Carregando dados...")
+        print("Carregando dados...") # Imprime uma mensagem indicando o início do carregamento dos dados.
 
         try:
-            if isinstance(data_path, str):
-                data = pd.read_csv(data_path)
+            if isinstance(data_path, str): # Verifica se o 'data_path' é uma string (caminho de arquivo).
+                data = pd.read_csv(data_path) # Carrega os dados de um arquivo CSV usando o caminho.
             else:
-                data = pd.read_csv(data_path)
+                data = pd.read_csv(data_path) # Caso contrário, assume que é um objeto de arquivo e carrega o CSV.
 
-            print(f"Dados carregados: {data.shape[0]} linhas, {data.shape[1]} colunas")
+            print(f"Dados carregados: {data.shape[0]} linhas, {data.shape[1]} colunas") # Imprime as dimensões dos dados carregados.
 
-            # Definir target antes de tudo
-            if not self.target_column:
-                self.target_column = data.columns[-1]
+            if not self.target_column: # Verifica se a coluna alvo não foi definida.
+                self.target_column = data.columns[-1] # Se não, define a última coluna como a coluna alvo.
 
-            if self.target_column not in data.columns:
-                raise ValueError(f"Coluna target '{self.target_column}' não encontrada nos dados.")
+            if self.target_column not in data.columns: # Verifica se a coluna alvo especificada existe nos dados.
+                raise ValueError(f"Coluna target '{self.target_column}' não encontrada nos dados.") # Levanta um erro se a coluna alvo não for encontrada.
 
-            # Detectar tipo do problema
-            if self.problem_type == 'auto':
-                self.problem_type = self.detect_problem_type(data)
-            print(f"Tipo de problema detectado: {self.problem_type}")
+            if self.problem_type == 'auto': # Verifica se o tipo de problema deve ser detectado automaticamente.
+                self.problem_type = self.detect_problem_type(data) # Detecta o tipo de problema (classificação ou regressão).
+            print(f"Tipo de problema detectado: {self.problem_type}") # Imprime o tipo de problema detectado.
 
-            # Separar X e y antes do processamento pesado
-            X = data.drop(columns=[self.target_column]).copy()
-            y = data[self.target_column].copy()
+            X = data.drop(columns=[self.target_column]).copy() # Cria um DataFrame X (features) removendo a coluna alvo.
+            y = data[self.target_column].copy() # Cria uma Série y (alvo) com a coluna alvo.
 
-            # Processar apenas X
-            X = self.advanced_cleaning(X)
-            X = self.handle_missing_values(X, strategy='simple')
-            X = self.encode_categorical(X)
+            X = self.advanced_cleaning(X) # Aplica a função de limpeza avançada aos dados X.
+            X = self.handle_missing_values(X, strategy='simple') # Trata os valores faltantes nos dados X usando a estratégia 'simple'.
+            X = self.encode_categorical(X) # Codifica as variáveis categóricas nos dados X.
 
-            # Reindexar y se alguma linha foi removida ou alterada em X
-            y = y.loc[X.index]
+            y = y.loc[X.index] # Alinha o índice de y com o índice de X, garantindo que as linhas correspondam após as operações em X.
 
-            # Feature selection
-            if X.shape[1] > 10:
-                X = self.feature_selection(X, y)
+            if X.shape[1] > 10: # Verifica se há mais de 10 features para considerar a seleção.
+                X = self.feature_selection(X, y) # Realiza a seleção de features em X usando y como alvo.
 
-            # Scaling
-            X = self.scale_features(X)
+            X = self.scale_features(X) # Escala (normaliza/padroniza) as features em X.
 
-            print(f"✅ Processamento concluído. Shape final: {X.shape}")
+            print(f"✅ Processamento concluído. Shape final: {X.shape}") # Imprime uma mensagem de sucesso com as dimensões finais de X.
 
-            return X, y, self.problem_type
+            return X, y, self.problem_type # Retorna as features processadas, o alvo e o tipo de problema.
 
-        except Exception as e:
-            print(f"❌ Erro no processamento: {str(e)}")
-            return self.simple_process(data_path)
+        except Exception as e: # Captura qualquer exceção que ocorra durante o processamento.
+            print(f"❌ Erro no processamento: {str(e)}") # Imprime uma mensagem de erro.
+            return self.simple_process(data_path) # Em caso de erro, chama a função de processamento simples como fallback.
 
     def simple_process(self, data_path):
         """Processamento simples de fallback"""
+        # Imprime uma mensagem indicando que o processamento simples de fallback está sendo usado
         print("Usando processamento simples de fallback...")
 
         try:
+            # Verifica se o data_path é uma string (caminho do arquivo)
             if isinstance(data_path, str):
+                # Carrega o CSV do caminho especificado em um DataFrame pandas
                 data = pd.read_csv(data_path)
             else:
+                # Se não for uma string, assume que é um objeto de arquivo e carrega o CSV
                 data = pd.read_csv(data_path)
 
+            # Verifica se a coluna alvo (target_column) está definida e presente nos dados
             if self.target_column and self.target_column in data.columns:
+                # Separa as features (X) removendo a coluna alvo
                 X = data.drop(columns=[self.target_column]).copy()
+                # Atribui a coluna alvo (y)
                 y = data[self.target_column].copy()
             else:
+                # Se a coluna alvo não estiver definida ou não for encontrada, assume a última coluna como alvo
                 self.target_column = data.columns[-1]
+                # Separa as features (X) como todas as colunas exceto a última
                 X = data.iloc[:, :-1].copy()
+                # Atribui a última coluna como alvo (y)
                 y = data.iloc[:, -1].copy()
 
+            # Detecta o tipo de problema (classificação ou regressão) com base na coluna alvo
             if y.dtype == 'object' or str(y.dtype) == 'category' or len(y.unique()) <= 10:
+                # Se o tipo for objeto/categoria ou tiver poucas classes únicas, é classificação
                 problem_type = 'classification'
             else:
+                # Caso contrário, é regressão
                 problem_type = 'regression'
 
-            # Remover colunas com muitos NaN
+            # Remove colunas de X que tenham mais de 50% de valores ausentes
             X = X.dropna(axis=1, thresh=int(len(X) * 0.5))
 
-            # Numéricas
+            # Seleciona as colunas numéricas no DataFrame X
             numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+            # Verifica se existem colunas numéricas para processar
             if numeric_cols:
+                # Preenche os valores nulos nas colunas numéricas com a média de cada coluna
                 X[numeric_cols] = X[numeric_cols].fillna(X[numeric_cols].mean())
 
             # Categóricas
+            # Seleciona as colunas categóricas restantes no DataFrame X
             categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
+            # Itera sobre cada coluna categórica
             for col in categorical_cols:
+                # Preenche quaisquer valores nulos na coluna com a string 'missing'
                 X[col] = X[col].fillna('missing')
+                # Converte a coluna categórica em valores numéricos usando factorize (Label Encoding)
                 X[col] = pd.factorize(X[col])[0]
 
+            # Imprime uma mensagem de sucesso após o processamento simples, mostrando a forma final dos dados
             print(f"✅ Processamento simples concluído. Shape final: {X.shape}")
 
+            # Retorna as features processadas (X), o target (y) e o tipo de problema detectado
             return X, y, problem_type
 
+        # Captura qualquer exceção que ocorra durante o processamento simples
         except Exception as e:
+            # Imprime uma mensagem de erro se o processamento simples falhar
             print(f"❌ Erro no processamento simples: {str(e)}")
+            # Relança a exceção para que o chamador possa lidar com ela
+            raise
+
+            # Seleciona as colunas numéricas no DataFrame X
+            numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+            # Verifica se existem colunas numéricas para processar
+            if numeric_cols:
+                # Preenche os valores nulos nas colunas numéricas com a média de cada coluna
+                X[numeric_cols] = X[numeric_cols].fillna(X[numeric_cols].mean())
+
+            # Categóricas
+            # Seleciona as colunas categóricas restantes no DataFrame X
+            categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
+            # Itera sobre cada coluna categórica
+            for col in categorical_cols:
+                # Preenche quaisquer valores nulos na coluna com a string 'missing'
+                X[col] = X[col].fillna('missing')
+                # Converte a coluna categórica em valores numéricos usando factorize (Label Encoding)
+                X[col] = pd.factorize(X[col])[0]
+
+            # Imprime uma mensagem de sucesso após o processamento simples, mostrando a forma final dos dados
+            print(f"✅ Processamento simples concluído. Shape final: {X.shape}")
+
+            # Retorna as features processadas (X), o target (y) e o tipo de problema detectado
+            return X, y, problem_type
+
+        # Captura qualquer exceção que ocorra durante o processamento simples
+        except Exception as e:
+            # Imprime uma mensagem de erro se o processamento simples falhar
+            print(f"❌ Erro no processamento simples: {str(e)}")
+            # Relança a exceção para que o chamador possa lidar com ela
             raise
