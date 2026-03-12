@@ -1,105 +1,167 @@
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer, KNNImputer
-from sklearn.feature_selection import SelectKBest, f_classif, f_regression, mutual_info_classif, mutual_info_regression
-import warnings
-warnings.filterwarnings('ignore')
+# Classe AdvancedDataProcessor: pipeline de pré-processamento de dados.
+# 1. Detecta automaticamente se o problema é classificação ou regressão.
+# 2. Faz limpeza avançada: remove duplicatas, trata infinitos e colunas com muitos NaN.
+# 3. Aplica tratamento de outliers em colunas numéricas (clipping).
+# 4. Cria novas features (produto, divisão, média, desvio padrão).
+# 5. Trata valores faltantes com mediana/moda ou imputação.
+# 6. Codifica variáveis categóricas (One-Hot para poucas categorias, LabelEncoder para muitas).
+# 7. Escala variáveis numéricas com StandardScaler.
+# 8. Seleciona melhores features com SelectKBest.
+# 9. Executa todo o pipeline no método process(), retornando X, y e tipo de problema.
 
 
-class AdvancedDataProcessor:
-    def __init__(self, target_column=None, problem_type='auto'):
-        self.target_column = target_column
-        self.problem_type = problem_type
-        self.preprocessors = {}
-        self.encoders = {}
-        self.scalers = {}
-        self.feature_selector = None
-        self.imputer = None
+import pandas as pd  # Importa a biblioteca pandas, fundamental para manipulação e análise de dados tabulares.
+import numpy as np  # Importa a biblioteca numpy, usada para operações numéricas e arrays.
+# Importa classes de pré-processamento do scikit-learn:
+from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder  # LabelEncoder para codificação de rótulos, StandardScaler para padronização, OneHotEncoder para codificação one-hot.
+# Importa classes de imputação do scikit-learn para tratamento de valores ausentes:
+from sklearn.impute import SimpleImputer, KNNImputer  # SimpleImputer para estratégias básicas (média, mediana, moda), KNNImputer para imputação baseada em vizinhos.
+# Importa classes e funções para seleção de features do scikit-learn:
+from sklearn.feature_selection import SelectKBest, f_classif, f_regression, mutual_info_classif, mutual_info_regression  # SelectKBest para selecionar as K melhores features, e diferentes funções de pontuação para classificação (f_classif, mutual_info_classif) e regressão (f_regression, mutual_info_regression).
+import warnings  # Importa o módulo warnings para gerenciar avisos.
+warnings.filterwarnings('ignore')  # Configura para ignorar todos os avisos durante a execução do código.
+
+
+class AdvancedDataProcessor:  # Define uma classe chamada AdvancedDataProcessor para encapsular as funcionalidades de processamento de dados.
+    def __init__(self, target_column=None, problem_type='auto'):  # Define o método construtor da classe, que é chamado ao criar uma nova instância.
+        self.target_column = target_column  # Inicializa o atributo target_column com o nome da coluna alvo (variável dependente), pode ser None se não for especificado.
+        self.problem_type = problem_type  # Inicializa o atributo problem_type (tipo de problema: 'classification', 'regression' ou 'auto' para detecção automática).
+        self.preprocessors = {}  # Inicializa um dicionário vazio para armazenar pré-processadores ajustados (não usados explicitamente no código fornecido, mas útil para expansão).
+        self.encoders = {}  # Inicializa um dicionário vazio para armazenar LabelEncoders ajustados para colunas categóricas.
+        self.scalers = {}  # Inicializa um dicionário vazio para armazenar Scalers ajustados para colunas numéricas.
+        self.feature_selector = None  # Inicializa o atributo feature_selector como None, que armazenará o seletor de features ajustado.
+        self.imputer = None  # Inicializa o atributo imputer como None, que armazenará o imputer de valores ausentes ajustado (não usado explicitamente, mas útil para expansão).
 
     def detect_problem_type(self, data):
         """Detecta automaticamente se é classificação ou regressão"""
+        # Verifica se a coluna alvo foi definida e se ela existe no DataFrame.
         if self.target_column and self.target_column in data.columns:
+            # Seleciona a coluna alvo do DataFrame.
             target = data[self.target_column]
 
+            # Inicia um bloco try-except para lidar com possíveis erros durante a detecção do tipo de problema.
             try:
+                # Tenta converter a coluna alvo para um tipo numérico, transformando erros em NaN.
                 target_numeric = pd.to_numeric(target, errors='coerce')
+                # Calcula a proporção de valores não nulos após a tentativa de conversão numérica.
                 numeric_ratio = target_numeric.notna().mean()
 
+                # Se o tipo de dado original da coluna alvo for 'object' (geralmente string) ou 'category', é classificação.
                 if target.dtype == 'object' or str(target.dtype) == 'category':
+                    # Retorna 'classification' se for uma coluna categórica.
                     return 'classification'
 
+                # Se a proporção de valores numéricos válidos for menor que 80%, assume-se que é classificação.
                 if numeric_ratio < 0.8:
+                    # Retorna 'classification' se muitos valores não puderam ser convertidos para numérico.
                     return 'classification'
 
+                # Conta o número de valores únicos na coluna alvo, ignorando NaN.
                 unique_count = target.nunique(dropna=True)
+                # Se o número de valores únicos for menor ou igual a 10, é classificação (critério comum para classes discretas).
                 if unique_count <= 10:
+                    # Retorna 'classification' se houver poucas classes únicas.
                     return 'classification'
 
+                # Se nenhuma das condições acima for atendida, assume-se que é um problema de regressão.
                 return 'regression'
+            # Captura qualquer exceção que possa ocorrer no bloco try.
             except Exception:
+                # Em caso de erro, verifica o tipo de dado original ou o número de únicos como fallback.
                 if target.dtype == 'object' or len(target.unique()) <= 10:
+                    # Retorna 'classification' se for objeto ou tiver poucas classes únicas.
                     return 'classification'
+                # Caso contrário, retorna 'regression'.
                 return 'regression'
 
+        # Se a coluna alvo não foi definida ou não encontrada, retorna 'auto' para indicar que não foi possível detectar.
         return 'auto'
 
     def advanced_cleaning(self, data):
+        # Define um método para realizar a limpeza avançada dos dados.
         """Limpeza avançada dos dados"""
+        # Imprime uma mensagem indicando o início do processo de limpeza avançada.
         print("Realizando limpeza avançada dos dados...")
 
+        # Cria uma cópia do DataFrame de entrada para evitar modificar o original.
         data_cleaned = data.copy()
 
-        # 1. Remover duplicatas
+        # Armazena o número original de linhas do DataFrame antes da remoção de duplicatas.
         original_len = len(data_cleaned)
+        # Remove linhas duplicadas do DataFrame, mantendo apenas a primeira ocorrência.
         data_cleaned = data_cleaned.drop_duplicates()
+        # Imprime o número de duplicatas que foram removidas.
         print(f"Duplicatas removidas: {original_len - len(data_cleaned)}")
 
-        # 2. Tratar valores infinitos
+        # Substitui todos os valores infinitos positivos e negativos por NaN (Not a Number).
         data_cleaned = data_cleaned.replace([np.inf, -np.inf], np.nan)
 
-        # 3. Remover colunas com muitos valores faltantes (>50%)
+        # Calcula a porcentagem de valores ausentes para cada coluna.
         missing_percentage = data_cleaned.isnull().mean()
+        # Identifica as colunas que têm mais de 50% de valores ausentes.
         columns_to_drop = missing_percentage[missing_percentage > 0.5].index.tolist()
 
+        # Verifica se há colunas a serem removidas.
         if columns_to_drop:
+            # Remove as colunas identificadas com alta taxa de valores ausentes.
             data_cleaned = data_cleaned.drop(columns=columns_to_drop)
+            # Imprime os nomes das colunas que foram removidas.
             print(f"Colunas removidas (alta taxa de missing): {columns_to_drop}")
 
-        # 4. Detectar e tratar outliers de forma menos agressiva
+        # Verifica se o número de linhas no DataFrame limpo é menor que 10000.
         if len(data_cleaned) < 10000:
+            # Seleciona todas as colunas numéricas no DataFrame.
             numeric_cols = data_cleaned.select_dtypes(include=[np.number]).columns.tolist()
 
+            # Verifica se a coluna alvo foi definida e se ela está entre as colunas numéricas.
             if self.target_column in numeric_cols:
+                # Remove a coluna alvo da lista de colunas numéricas para não ser incluída nas operações subsequentes (como tratamento de outliers).
                 numeric_cols.remove(self.target_column)
 
-            # Em vez de remover linhas sucessivamente, faz clipping dos outliers
+            # Itera sobre cada coluna numérica identificada.
             for col in numeric_cols:
+                # Extrai a série de dados da coluna atual para facilitar o acesso.
                 series = data_cleaned[col]
 
+                # Verifica se há pelo menos 5 valores não nulos na série para calcular quartis de forma significativa.
                 if series.notna().sum() < 5:
+                    # Se não houver valores suficientes, pula para a próxima coluna.
                     continue
 
+                # Calcula o primeiro quartil (Q1) da série.
                 Q1 = series.quantile(0.25)
+                # Calcula o terceiro quartil (Q3) da série.
                 Q3 = series.quantile(0.75)
+                # Calcula o Intervalo Interquartil (IQR), que é a diferença entre Q3 e Q1.
                 IQR = Q3 - Q1
 
+                # Verifica se o IQR é NaN (indica que não há variabilidade ou dados suficientes) ou zero.
                 if pd.isna(IQR) or IQR == 0:
+                    # Se for, pula para a próxima coluna, pois não é possível calcular limites de outliers.
                     continue
 
+                # Calcula o limite inferior para detecção de outliers.
                 lower_bound = Q1 - 1.5 * IQR
+                # Calcula o limite superior para detecção de outliers.
                 upper_bound = Q3 + 1.5 * IQR
 
+                # Cria uma máscara booleana para identificar os valores que são considerados outliers (abaixo do limite inferior ou acima do superior).
                 outlier_mask = (series < lower_bound) | (series > upper_bound)
+                # Calcula a proporção de outliers na coluna.
                 outlier_ratio = outlier_mask.mean()
 
+                # Verifica se a proporção de outliers está entre 0 (não há outliers) e 0.1 (até 10% de outliers).
                 if 0 < outlier_ratio < 0.1:
+                    # Se a condição for atendida, aplica o clipping: valores abaixo do lower_bound são substituídos por lower_bound,
+                    # e valores acima do upper_bound são substituídos por upper_bound.
                     data_cleaned[col] = series.clip(lower=lower_bound, upper=upper_bound)
 
-        # 5. Engenharia de features básica
+        # Verifica novamente se o número de linhas no DataFrame limpo é menor que 10000.
         if len(data_cleaned) < 10000:
+            # Se for, aplica a engenharia de features ao DataFrame.
             data_cleaned = self.feature_engineering(data_cleaned)
 
+        # Retorna o DataFrame com a limpeza avançada aplicada.
         return data_cleaned
 
     def feature_engineering(self, data):
