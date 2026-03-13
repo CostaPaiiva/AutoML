@@ -571,35 +571,34 @@ class PDFReportGenerator:
             elements.append(Spacer(1, 3))
 
         return elements
+        def _create_footer(self):
+            """Cria rodapé final"""
+            elements = []  # Inicializa uma lista para armazenar os elementos do rodapé.
 
-    def _create_footer(self):
-        """Cria rodapé final"""
-        elements = []
+            elements.append(Spacer(1, 20))  # Adiciona um espaço vertical de 20 unidades.
+            elements.append(Paragraph(  # Adiciona um parágrafo ao rodapé.
+                f"Documento gerado automaticamente pelo {self.PLATFORM_NAME}.",  # Texto informativo sobre a origem do documento.
+                self.styles['MutedText']  # Aplica o estilo 'MutedText' ao parágrafo.
+            ))
+            elements.append(Paragraph(  # Adiciona outro parágrafo ao rodapé.
+                "Este relatório resume os principais resultados, métricas e recomendações obtidos durante a execução.",  # Texto de resumo do relatório.
+                self.styles['FooterCustom']  # Aplica o estilo 'FooterCustom' ao parágrafo.
+            ))
 
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph(
-            f"Documento gerado automaticamente pelo {self.PLATFORM_NAME}.",
-            self.styles['MutedText']
-        ))
-        elements.append(Paragraph(
-            "Este relatório resume os principais resultados, métricas e recomendações obtidos durante a execução.",
-            self.styles['FooterCustom']
-        ))
+            return elements  # Retorna a lista de elementos que compõem o rodapé.
 
-        return elements
+        def _get_primary_metric(self, metrics):
+            """Obtém a métrica principal para ordenação"""
+            if self.problem_type == 'classification':  # Verifica se o tipo de problema é classificação.
+                return self._safe_float(metrics.get('f1', 0))  # Retorna o F1-Score para classificação, garantindo um float seguro.
+            else:  # Se não for classificação, assume que é regressão.
+                return -self._safe_float(metrics.get('rmse', 0))  # Retorna o negativo do RMSE para regressão (menor RMSE é melhor, então negativo o torna maior para ordenação decrescente).
 
-    def _get_primary_metric(self, metrics):
-        """Obtém a métrica principal para ordenação"""
-        if self.problem_type == 'classification':
-            return self._safe_float(metrics.get('f1', 0))
-        else:
-            return -self._safe_float(metrics.get('rmse', 0))
-
-    def _get_display_metric(self, metrics):
-        """Obtém a métrica principal para exibição amigável"""
-        if self.problem_type == 'classification':
-            value = self._safe_float(metrics.get('f1', 0))
-            return f"{value:.4f}"
-        else:
-            value = self._safe_float(metrics.get('rmse', 0))
-            return f"{value:.4f}"
+        def _get_display_metric(self, metrics):
+            """Obtém a métrica principal para exibição amigável"""
+            if self.problem_type == 'classification':  # Verifica se o tipo de problema é classificação.
+                value = self._safe_float(metrics.get('f1', 0))  # Obtém o valor do F1-Score de forma segura.
+                return f"{value:.4f}"  # Formata o F1-Score para exibição com 4 casas decimais.
+            else:  # Se não for classificação, assume que é regressão.
+                value = self._safe_float(metrics.get('rmse', 0))  # Obtém o valor do RMSE de forma segura.
+                return f"{value:.4f}"  # Formata o RMSE para exibição com 4 casas decimais.
