@@ -487,72 +487,75 @@ class PDFReportGenerator:
             ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 0.6, self.border_color),
         ])
-
+        # Itera sobre as linhas da tabela, começando da segunda linha (índice 1), para aplicar estilos condicionalmente.
         for i, row in enumerate(table_data[1:], 1):
+            # Extrai o texto da coluna 'Status' da linha atual. Verifica se o objeto tem o atributo 'text' para evitar erros.
             status_text = row[3].text if hasattr(row[3], 'text') else ""
+            # Verifica se a palavra "RECOMENDADO" está presente no texto da coluna 'Status'.
             if "RECOMENDADO" in status_text:
+            # Se for o modelo recomendado, define a cor de fundo da linha como um azul claro.
                 table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#E8F4FD'))
+                # Define a cor do texto para esta linha como um tom escuro.
                 table_style.add('TEXTCOLOR', (0, i), (-1, i), self.text_dark)
+                # Define a fonte para esta linha como negrito.
                 table_style.add('FONTNAME', (0, i), (-1, i), 'Helvetica-Bold')
-
-        table.setStyle(table_style)
-        elements.append(table)
-
-        return elements
-
-    def _create_metrics_section(self):
-        """Cria seção de métricas detalhadas"""
-        elements = []
-
-        elements.append(Paragraph("ANÁLISE DETALHADA DE MÉTRICAS", self.styles['SectionTitle']))
-
-        other_models = [
-            (model_name, metrics)
-            for model_name, metrics in self.results.items()
-            if model_name != self.best_model_name
-        ]
-
-        if not other_models:
-            elements.append(Paragraph(
-                "Não há modelos adicionais para exibir nesta seção.",
-                self.styles['BodyTextCustom']
-            ))
-            return elements
-
-        for idx, (model_name, metrics) in enumerate(other_models, 1):
-            block = []
-
-            block.append(Paragraph(
-                f"Modelo: {self._safe_text(model_name)}",
-                self.styles['SubtitleCustom']
-            ))
-
-            if self.problem_type == 'classification':
-                metrics_text = (
-                    f"Acurácia: {self._safe_float(metrics.get('accuracy', 0)):.4f} | "
-                    f"F1-Score: {self._safe_float(metrics.get('f1', 0)):.4f} | "
-                    f"Precisão: {self._safe_float(metrics.get('precision', 0)):.4f}"
-                )
-            else:
-                metrics_text = (
-                    f"R²: {self._safe_float(metrics.get('r2', 0)):.4f} | "
-                    f"RMSE: {self._safe_float(metrics.get('rmse', 0)):.4f} | "
-                    f"MAE: {self._safe_float(metrics.get('mae', 0)):.4f}"
-                )
-
-            block.append(Paragraph(metrics_text, self.styles['BodyTextCustom']))
-            block.append(Spacer(1, 6))
-
-            elements.append(KeepTogether(block))
-
-            if idx % 12 == 0:
-                elements.append(PageBreak())
+                table.setStyle(table_style) # Aplica o estilo de tabela configurado 'table_style' à tabela.
+                elements.append(table) # Adiciona a tabela de ranking à lista de elementos do PDF.
 
         return elements
+        def _create_metrics_section(self):
+            """Cria seção de métricas detalhadas""" # Comentário: Docstring para a função que cria a seção de métricas detalhadas.
+            elements = [] # Inicializa uma lista vazia para armazenar os elementos do PDF.
 
-    def _create_recommendations(self):
-        """Cria seção de recomendações"""
-        elements = []
+            elements.append(Paragraph("ANÁLISE DETALHADA DE MÉTRICAS", self.styles['SectionTitle'])) # Adiciona um título de seção à lista de elementos.
+
+            other_models = [ # Inicializa uma lista para armazenar os modelos que não são o melhor modelo.
+                (model_name, metrics) # Tupla contendo o nome do modelo e suas métricas.
+                for model_name, metrics in self.results.items() # Itera sobre todos os modelos e suas métricas nos resultados.
+                if model_name != self.best_model_name # Filtra para incluir apenas os modelos que não são o melhor.
+            ]
+
+            if not other_models: # Verifica se não há outros modelos após a filtragem.
+                elements.append(Paragraph( # Adiciona um parágrafo informando que não há modelos adicionais para exibir.
+                    "Não há modelos adicionais para exibir nesta seção.", # Texto da mensagem.
+                    self.styles['BodyTextCustom'] # Aplica o estilo de texto personalizado.
+                ))
+                return elements # Retorna a lista de elementos (com a mensagem de nenhum modelo adicional).
+
+            for idx, (model_name, metrics) in enumerate(other_models, 1): # Itera sobre cada modelo restante com um índice.
+                block = [] # Inicializa uma lista para armazenar elementos de um bloco de modelo.
+
+                block.append(Paragraph( # Adiciona um parágrafo com o nome do modelo.
+                    f"Modelo: {self._safe_text(model_name)}", # Formata o nome do modelo (seguro para texto).
+                    self.styles['SubtitleCustom'] # Aplica o estilo de subtítulo personalizado.
+                ))
+
+                if self.problem_type == 'classification': # Verifica se o tipo de problema é classificação.
+                    metrics_text = ( # Constrói uma string com métricas específicas para classificação.
+                        f"Acurácia: {self._safe_float(metrics.get('accuracy', 0)):.4f} | " # Formata e adiciona a acurácia.
+                        f"F1-Score: {self._safe_float(metrics.get('f1', 0)):.4f} | " # Formata e adiciona o F1-Score.
+                        f"Precisão: {self._safe_float(metrics.get('precision', 0)):.4f}" # Formata e adiciona a precisão.
+                    )
+                else: # Se não for classificação, assume que é regressão.
+                    metrics_text = ( # Constrói uma string com métricas específicas para regressão.
+                        f"R²: {self._safe_float(metrics.get('r2', 0)):.4f} | " # Formata e adiciona o R².
+                        f"RMSE: {self._safe_float(metrics.get('rmse', 0)):.4f} | " # Formata e adiciona o RMSE.
+                        f"MAE: {self._safe_float(metrics.get('mae', 0)):.4f}" # Formata e adiciona o MAE.
+                    )
+
+                block.append(Paragraph(metrics_text, self.styles['BodyTextCustom'])) # Adiciona as métricas formatadas como um parágrafo ao bloco.
+                block.append(Spacer(1, 6)) # Adiciona um espaço vertical após as métricas.
+
+                elements.append(KeepTogether(block)) # Adiciona o bloco de modelo e suas métricas à lista principal de elementos, mantendo-os juntos na mesma página.
+
+                if idx % 12 == 0: # Verifica se 12 modelos foram adicionados, para adicionar uma quebra de página.
+                    elements.append(PageBreak()) # Adiciona uma quebra de página.
+
+            return elements # Retorna a lista completa de elementos da seção de métricas.
+
+        def _create_recommendations(self):
+            """Cria seção de recomendações""" # Comentário: Docstring para a função que cria a seção de recomendações.
+            elements = [] # Inicializa uma lista vazia para armazenar os elementos do PDF.
 
         elements.append(Paragraph("RECOMENDAÇÕES E PRÓXIMOS PASSOS", self.styles['SectionTitle']))
 
@@ -565,9 +568,12 @@ class PDFReportGenerator:
             "6. Avaliar interpretabilidade, monitoramento e governança do modelo.",
             "7. Considerar evolução futura com ensemble, explainability e automação contínua."
         ]
-
+        # Itera sobre cada recomendação na lista 'recommendations'.
         for rec in recommendations:
+            # Adiciona um parágrafo contendo a recomendação atual à lista de elementos do relatório.
+            # O estilo 'BodyTextCustom' é aplicado a este parágrafo.
             elements.append(Paragraph(rec, self.styles['BodyTextCustom']))
+            # Adiciona um espaço vertical de 3 unidades após cada recomendação para melhor legibilidade.
             elements.append(Spacer(1, 3))
 
         return elements
