@@ -40,23 +40,35 @@ class PDFReportGenerator:
         self.styles = getSampleStyleSheet()
         self.setup_brand()
         self.setup_custom_styles()
+        def setup_brand(self):
+            """Configura identidade visual da plataforma"""
+            # Define o nome da plataforma, usado em vários lugares do relatório.
+            self.PLATFORM_NAME = "AutoML"
+            # Define a cor primária da marca em formato hexadecimal.
+            self.PRIMARY_COLOR = "#1E88E5"
+            # Define a cor secundária da marca em formato hexadecimal.
+            self.SECONDARY_COLOR = "#0D47A1"
+            # Define o subtítulo da plataforma, exibido na capa do relatório.
+            self.SUBTITLE = "Sistema Inteligente de Machine Learning"
+            # Define o caminho para o arquivo do logo da plataforma.
+            self.LOGO_PATH = "logo.png"
 
-    def setup_brand(self):
-        """Configura identidade visual da plataforma"""
-        self.PLATFORM_NAME = "AutoML"
-        self.PRIMARY_COLOR = "#1E88E5"
-        self.SECONDARY_COLOR = "#0D47A1"
-        self.SUBTITLE = "Sistema Inteligente de Machine Learning"
-        self.LOGO_PATH = "logo.png"
-
-        self.primary_color = colors.HexColor(self.PRIMARY_COLOR)
-        self.secondary_color = colors.HexColor(self.SECONDARY_COLOR)
-        self.accent_color = colors.HexColor("#F39C12")
-        self.success_color = colors.HexColor("#27AE60")
-        self.light_bg = colors.HexColor("#F4F8FD")
-        self.border_color = colors.HexColor("#D6E4F0")
-        self.text_dark = colors.HexColor("#1C2833")
-        self.text_muted = colors.HexColor("#5D6D7E")
+            # Converte a cor primária de hexadecimal para um objeto de cor ReportLab.
+            self.primary_color = colors.HexColor(self.PRIMARY_COLOR)
+            # Converte a cor secundária de hexadecimal para um objeto de cor ReportLab.
+            self.secondary_color = colors.HexColor(self.SECONDARY_COLOR)
+            # Define uma cor de destaque para uso em elementos específicos.
+            self.accent_color = colors.HexColor("#F39C12")
+            # Define uma cor para indicar sucesso ou destaque positivo.
+            self.success_color = colors.HexColor("#27AE60")
+            # Define uma cor de fundo clara, geralmente para tabelas ou blocos de texto.
+            self.light_bg = colors.HexColor("#F4F8FD")
+            # Define uma cor para bordas de tabelas e outros elementos gráficos.
+            self.border_color = colors.HexColor("#D6E4F0")
+            # Define uma cor escura para o texto principal.
+            self.text_dark = colors.HexColor("#1C2833")
+            # Define uma cor mais suave para textos secundários ou menos importantes.
+            self.text_muted = colors.HexColor("#5D6D7E")
 
     def setup_custom_styles(self):
         """Configura estilos personalizados para o PDF"""
@@ -162,17 +174,23 @@ class PDFReportGenerator:
                 alignment=1,
                 spaceAfter=10
             ))
-
-    def generate_report(self, filename="relatorio_ml.pdf"):
-        """Gera o relatório PDF completo"""
-        doc = SimpleDocTemplate(
-            filename,
-            pagesize=A4,
-            rightMargin=36,
-            leftMargin=36,
-            topMargin=36,
-            bottomMargin=36
-        )
+            def generate_report(self, filename="relatorio_ml.pdf"):
+                """Gera o relatório PDF completo"""
+                # Cria um objeto SimpleDocTemplate, que é a base para o documento PDF.
+                doc = SimpleDocTemplate(
+                    # Define o nome do arquivo de saída para o PDF.
+                    filename,
+                    # Define o tamanho da página como A4.
+                    pagesize=A4,
+                    # Define a margem direita do documento em unidades de ReportLab (pontos).
+                    rightMargin=36,
+                    # Define a margem esquerda do documento em unidades de ReportLab (pontos).
+                    leftMargin=36,
+                    # Define a margem superior do documento em unidades de ReportLab (pontos).
+                    topMargin=36,
+                    # Define a margem inferior do documento em unidades de ReportLab (pontos).
+                    bottomMargin=36
+                )
         story = []  # Inicializa uma lista vazia chamada 'story' que armazenará os elementos do PDF.
 
         story.extend(self._create_cover_page())  # Adiciona os elementos da página de capa, gerados pela função '_create_cover_page', à lista 'story'.
