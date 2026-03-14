@@ -380,99 +380,115 @@ class PDFReportGenerator:
 
         elements.append(Paragraph(summary_text, self.styles['BodyTextCustom']))
         return elements
+        def _create_best_model_section(self):
+            """Cria seção detalhada do melhor modelo"""
+            elements = []  # Inicializa uma lista vazia para armazenar os elementos do PDF.
 
-    def _create_best_model_section(self):
-        """Cria seção detalhada do melhor modelo"""
-        elements = []
+            elements.append(Paragraph("MELHOR MODELO IDENTIFICADO", self.styles['SectionTitle']))  # Adiciona um título de seção à lista de elementos.
 
-        elements.append(Paragraph("MELHOR MODELO IDENTIFICADO", self.styles['SectionTitle']))
+            if self.best_model_name in self.results:  # Verifica se o nome do melhor modelo existe nos resultados.
+                metrics = self.results[self.best_model_name]  # Obtém as métricas do melhor modelo.
 
-        if self.best_model_name in self.results:
-            metrics = self.results[self.best_model_name]
-
-            if self.problem_type == 'classification':
-                metrics_data = [
-                    ["Métrica", "Valor"],
-                    ["Acurácia", f"{self._safe_float(metrics.get('accuracy', 0)):.4f}"],
-                    ["Precisão", f"{self._safe_float(metrics.get('precision', 0)):.4f}"],
-                    ["Recall", f"{self._safe_float(metrics.get('recall', 0)):.4f}"],
-                    ["F1-Score", f"{self._safe_float(metrics.get('f1', 0)):.4f}"],
-                    ["ROC AUC", f"{self._safe_float(metrics.get('roc_auc', 0)):.4f}"],
-                ]
-            else:
-                metrics_data = [
-                    ["Métrica", "Valor"],
-                    ["R² Score", f"{self._safe_float(metrics.get('r2', 0)):.4f}"],
-                    ["RMSE", f"{self._safe_float(metrics.get('rmse', 0)):.4f}"],
-                    ["MAE", f"{self._safe_float(metrics.get('mae', 0)):.4f}"],
-                    ["MAPE", f"{self._safe_float(metrics.get('mape', 0)):.2f}%"],
-                ]
-
-            table = Table(metrics_data, repeatRows=1, colWidths=[2.2 * inch, 1.8 * inch])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), self.secondary_color),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('BACKGROUND', (0, 1), (-1, -1), self.light_bg),
-                ('TEXTCOLOR', (0, 1), (-1, -1), self.text_dark),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.75, self.border_color)
-            ]))
-
+                if self.problem_type == 'classification':  # Verifica se o tipo de problema é classificação.
+                    metrics_data = [  # Define os dados da tabela de métricas para classificação.
+                        ["Métrica", "Valor"],  # Cabeçalho da tabela.
+                        ["Acurácia", f"{self._safe_float(metrics.get('accuracy', 0)):.4f}"],  # Adiciona a acurácia formatada.
+                        ["Precisão", f"{self._safe_float(metrics.get('precision', 0)):.4f}"],  # Adiciona a precisão formatada.
+                        ["Recall", f"{self._safe_float(metrics.get('recall', 0)):.4f}"],  # Adiciona o recall formatado.
+                        ["F1-Score", f"{self._safe_float(metrics.get('f1', 0)):.4f}"],  # Adiciona o F1-Score formatado.
+                        ["ROC AUC", f"{self._safe_float(metrics.get('roc_auc', 0)):.4f}"],  # Adiciona o ROC AUC formatado.
+                    ]
+                else:  # Se não for classificação, assume que é regressão.
+                    metrics_data = [  # Define os dados da tabela de métricas para regressão.
+                        ["Métrica", "Valor"],  # Cabeçalho da tabela.
+                        ["R² Score", f"{self._safe_float(metrics.get('r2', 0)):.4f}"],  # Adiciona o R² Score formatado.
+                        ["RMSE", f"{self._safe_float(metrics.get('rmse', 0)):.4f}"],  # Adiciona o RMSE formatado.
+                        ["MAE", f"{self._safe_float(metrics.get('mae', 0)):.4f}"],  # Adiciona o MAE formatado.
+                        ["MAPE", f"{self._safe_float(metrics.get('mape', 0)):.2f}%"],  # Adiciona o MAPE formatado como porcentagem.
+                    ]
+                # Cria um objeto Table com os dados das métricas.
+                # 'metrics_data' contém as métricas e seus valores.
+                # 'repeatRows=1' garante que a linha de cabeçalho da tabela se repita se a tabela se estender por várias páginas.
+                # 'colWidths' define a largura de cada coluna na tabela.
+                table = Table(metrics_data, repeatRows=1, colWidths=[2.2 * inch, 1.8 * inch])
+                # Aplica um estilo visual à tabela usando TableStyle.
+                table.setStyle(TableStyle([
+                    # Define a cor de fundo para a linha do cabeçalho (primeira linha, índice 0) como a cor secundária.
+                    ('BACKGROUND', (0, 0), (-1, 0), self.secondary_color),
+                    # Define a cor do texto para a linha do cabeçalho como branco fumaça.
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    # Define a cor de fundo para as linhas de dados (a partir da segunda linha, índice 1, até o final) como um tom claro.
+                    ('BACKGROUND', (0, 1), (-1, -1), self.light_bg),
+                    # Define a cor do texto para as linhas de dados como um tom escuro.
+                    ('TEXTCOLOR', (0, 1), (-1, -1), self.text_dark),
+                    # Alinha todo o conteúdo da tabela (células) ao centro.
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    # Alinha verticalmente todo o conteúdo da tabela ao meio.
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    # Define a fonte para a linha do cabeçalho como negrito.
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    # Define o tamanho da fonte para todas as células da tabela como 10.
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    # Adiciona um preenchimento inferior de 8 unidades para todas as células.
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                    # Adiciona um preenchimento superior de 8 unidades para todas as células.
+                    ('TOPPADDING', (0, 0), (-1, -1), 8),
+                    # Adiciona uma grade a todas as células da tabela, com largura de linha de 0.75 e cor de borda definida.
+                    ('GRID', (0, 0), (-1, -1), 0.75, self.border_color)
+                ]))
+            # Cria um parágrafo que serve como uma recomendação para o melhor modelo.
             recommendation = Paragraph(
+                # Define o texto da recomendação, incluindo o nome do melhor modelo e a plataforma.
                 f"<b>Recomendação:</b> O modelo <b>{self._safe_text(self.best_model_name)}</b> "
                 f"é o mais indicado para uso em produção dentro do {self.PLATFORM_NAME}, "
                 "pois apresentou o melhor desempenho entre os algoritmos avaliados.",
+                # Aplica um estilo de texto personalizado (BodyTextCustom) ao parágrafo.
                 self.styles['BodyTextCustom']
             )
-
+            # Adiciona um bloco de elementos (tabela, espaço e recomendação) à lista principal de elementos do PDF.
+            # O KeepTogether garante que esses elementos permaneçam juntos na mesma página, se possível.
             elements.append(KeepTogether([
-                table,
-                Spacer(1, 10),
-                recommendation
+                table,  # A tabela de métricas detalhadas do melhor modelo.
+                Spacer(1, 10),  # Um espaço vertical de 10 unidades para separação.
+                recommendation  # O parágrafo com a recomendação sobre o melhor modelo.
             ]))
 
         return elements
+        def _create_ranking_table(self):
+            """Cria tabela de ranking dos modelos""" # Docstring: Descreve o propósito da função.
+            elements = [] # Inicializa uma lista vazia para armazenar os elementos do PDF.
 
-    def _create_ranking_table(self):
-        """Cria tabela de ranking dos modelos"""
-        elements = []
+            elements.append(Paragraph("RANKING COMPLETO DE MODELOS", self.styles['SectionTitle'])) # Adiciona um título de seção à lista de elementos.
 
-        elements.append(Paragraph("RANKING COMPLETO DE MODELOS", self.styles['SectionTitle']))
+            sorted_results = sorted( # Inicia a ordenação dos resultados dos modelos.
+                self.results.items(), # Converte o dicionário de resultados em uma lista de itens (pares chave-valor).
+                key=lambda x: self._get_primary_metric(x[1]), # Define a chave de ordenação usando uma função lambda que chama '_get_primary_metric' com as métricas do modelo.
+                reverse=True # Ordena em ordem decrescente, de modo que o melhor desempenho fique no topo.
+            )
 
-        sorted_results = sorted(
-            self.results.items(),
-            key=lambda x: self._get_primary_metric(x[1]),
-            reverse=True
-        )
+            table_data = [[ # Inicializa a lista de dados para a tabela, começando com a linha do cabeçalho.
+                Paragraph("Posição", self.styles['TableCellHeaderCustom']), # Adiciona o cabeçalho 'Posição' com estilo.
+                Paragraph("Modelo", self.styles['TableCellHeaderCustom']), # Adiciona o cabeçalho 'Modelo' com estilo.
+                Paragraph(self._metric_label_for_display(), self.styles['TableCellHeaderCustom']), # Adiciona o cabeçalho da métrica principal (ex: F1-Score, RMSE) com estilo.
+                Paragraph("Status", self.styles['TableCellHeaderCustom']), # Adiciona o cabeçalho 'Status' com estilo.
+            ]]
 
-        table_data = [[
-            Paragraph("Posição", self.styles['TableCellHeaderCustom']),
-            Paragraph("Modelo", self.styles['TableCellHeaderCustom']),
-            Paragraph(self._metric_label_for_display(), self.styles['TableCellHeaderCustom']),
-            Paragraph("Status", self.styles['TableCellHeaderCustom']),
-        ]]
+            for i, (model_name, metrics) in enumerate(sorted_results, 1): # Itera sobre os resultados ordenados, atribuindo um índice 'i' (posição).
+                display_metric = self._get_display_metric(metrics) # Obtém o valor da métrica principal formatado para exibição.
+                status = "⭐ RECOMENDADO" if model_name == self.best_model_name else "✅" # Define o status do modelo (recomendado ou padrão).
 
-        for i, (model_name, metrics) in enumerate(sorted_results, 1):
-            display_metric = self._get_display_metric(metrics)
-            status = "⭐ RECOMENDADO" if model_name == self.best_model_name else "✅"
+                table_data.append([ # Adiciona uma nova linha de dados à lista para a tabela.
+                    Paragraph(str(i), self.styles['TableCellCustom']), # Adiciona a posição do modelo com estilo.
+                    Paragraph(self._truncate_text(model_name, 42), self.styles['TableCellCustom']), # Adiciona o nome do modelo truncado com estilo.
+                    Paragraph(display_metric, self.styles['TableCellCustom']), # Adiciona a métrica de exibição do modelo com estilo.
+                    Paragraph(status, self.styles['TableCellCustom']), # Adiciona o status do modelo com estilo.
+                ])
 
-            table_data.append([
-                Paragraph(str(i), self.styles['TableCellCustom']),
-                Paragraph(self._truncate_text(model_name, 42), self.styles['TableCellCustom']),
-                Paragraph(display_metric, self.styles['TableCellCustom']),
-                Paragraph(status, self.styles['TableCellCustom']),
-            ])
-
-        table = Table(
-            table_data,
-            colWidths=[0.75 * inch, 3.0 * inch, 1.3 * inch, 1.15 * inch],
-            repeatRows=1
-        )
+            table = Table( # Cria um objeto Table com os dados preparados.
+                table_data, # Fornece os dados da tabela.
+                colWidths=[0.75 * inch, 3.0 * inch, 1.3 * inch, 1.15 * inch], # Define as larguras das colunas.
+                repeatRows=1 # Garante que a primeira linha (cabeçalho) se repita em novas páginas.
+            )
 
         table_style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.primary_color),
