@@ -11,8 +11,18 @@
 # 9. Adiciona rodapé com marca e informações finais.
 # 10. Método generate_report() monta todo o PDF e salva o arquivo.
 
-
+# Importa o tamanho de página padrão A4 para ser usado na criação de documentos PDF.
 from reportlab.lib.pagesizes import A4
+
+# Importa classes e funções do módulo "platypus" (Page Layout and Typography Using Scripts):
+# - SimpleDocTemplate: cria um documento PDF simples.
+# - Paragraph: permite inserir textos formatados em parágrafos.
+# - Spacer: adiciona espaços verticais entre elementos.
+# - Table: cria tabelas dentro do PDF.
+# - TableStyle: define estilos (cores, bordas, alinhamento) para tabelas.
+# - PageBreak: insere uma quebra de página.
+# - KeepTogether: mantém um conjunto de elementos juntos sem quebrar entre páginas.
+# - Image: insere imagens no documento.
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -23,23 +33,46 @@ from reportlab.platypus import (
     KeepTogether,
     Image
 )
+
+# - getSampleStyleSheet: fornece estilos prontos (como título, corpo de texto).
+# - ParagraphStyle: permite criar estilos personalizados para parágrafos.
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+# Define a unidade de medida "polegada" (inch), útil para margens, espaçamentos e tamanhos.
 from reportlab.lib.units import inch
+
+# Importa uma paleta de cores pré-definidas para usar em textos, tabelas e elementos gráficos.
 from reportlab.lib import colors
+
+# Importa a classe datetime para manipular datas e horas (ex.: inserir data atual no PDF).
 from datetime import datetime
+
+# Importa o módulo os para interagir com o sistema operacional (ex.: manipular caminhos de arquivos).
 import os
 
 
+# Define uma classe chamada PDFReportGenerator, responsável por gerar relatórios em PDF.
 class PDFReportGenerator:
+    # Método construtor: inicializa os atributos da classe quando um objeto é criado.
     def __init__(self, results, models, best_model_name, problem_type, data_info=None):
+        # Armazena os resultados (ex.: métricas de desempenho dos modelos).
         self.results = results
+        # Armazena os modelos utilizados na análise.
         self.models = models
+        # Guarda o nome do melhor modelo identificado.
         self.best_model_name = best_model_name
+        # Define o tipo de problema (ex.: classificação, regressão).
         self.problem_type = problem_type
+        # Armazena informações adicionais sobre os dados.
+        # Se não forem fornecidas, usa um dicionário vazio por padrão.
         self.data_info = data_info or {}
+        # Carrega um conjunto de estilos padrão (títulos, corpo de texto, etc.) para usar no PDF.
         self.styles = getSampleStyleSheet()
+        # Chama o método interno que configura elementos visuais da marca (ex.: logotipo, cores).
         self.setup_brand()
+        # Chama o método interno que cria estilos personalizados para parágrafos, títulos ou tabelas.
         self.setup_custom_styles()
+
         def setup_brand(self):
             """Configura identidade visual da plataforma"""
             # Define o nome da plataforma, usado em vários lugares do relatório.
