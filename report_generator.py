@@ -8,7 +8,7 @@
 # 6. Cria ranking completo dos modelos avaliados.
 # 7. Exibe métricas adicionais dos outros modelos.
 # 8. Inclui recomendações práticas e próximos passos.
-# 9. Adiciona rodapé com marca e informações finais.
+# 9. Adiciona rodapé com marca e informações finais..
 # 10. Método generate_report() monta todo o PDF e salva o arquivo.
 
 # Importa o tamanho de página padrão A4 para ser usado na criação de documentos PDF.
